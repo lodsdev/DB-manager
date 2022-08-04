@@ -1,0 +1,11 @@
+{
+    "Lua.diagnostics.globals": [
+        "dbConnect"
+    ],
+    "Lua.diagnostics.disable": [
+        "undefined-global",
+        "lowercase-global",
+        "param-type-mismatch",
+        "need-check-nil"
+    ]
+}

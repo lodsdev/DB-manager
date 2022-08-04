@@ -1,0 +1,5 @@
+<meta>
+    <script src='dbmanager.lua' type='server' />
+
+    <script src='sqlTest.lua' type='server' />
+</meta>

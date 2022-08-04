@@ -1,0 +1,5 @@
+addEventHandler('onResourceStart', resourceRoot, function()
+    local database = DBManager('sqlTest', 'database')
+    local myTable = database:CreateTable('test', 'id INTEGER PRIMARY KEY, name TEXT')
+    iprint(myTable.getTblName())
+end)
