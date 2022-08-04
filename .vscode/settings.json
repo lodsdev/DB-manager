@@ -6,6 +6,9 @@
         "undefined-global",
         "lowercase-global",
         "param-type-mismatch",
-        "need-check-nil"
+        "need-check-nil",
+        "unused-function",
+        "deprecated",
+        "redundant-parameter"
     ]
 }
