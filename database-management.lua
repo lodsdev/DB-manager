@@ -50,8 +50,9 @@ function dbGenerals:CreateTable(tblName, tableDefinition)
     return {delete = delete, getTblName = getTblName}
 end
 
-function dbGenerals:SQLRepo()
+local co
 
+function dbGenerals:SQLRepo()
     local function create(dto)
         if (not self.dto) then
             self.dto = toJSON(dto)
@@ -73,16 +74,20 @@ function dbGenerals:SQLRepo()
         dbExec(self.dbConnection, 'UPDATE '..self.tblName..' SET '..id..' = ? WHERE '..id..' = '..id, valueDTO)
     end
 
-    local function findAll()
-        return Promise.new(function(resolve, reject)
-            dbQuery(function(qh)
-                local result = dbPoll(qh, 0)
-                if (not (#result > 0)) then
-                    return reject('No results found!')
-                end
-                return resolve(result)
-            end, {}, self.dbConnection, 'SELECT * FROM '..self.tblName)
+    local function findAll()  
+        local allResults
+        co = coroutine.create(function()
+            dbQuery(callback, {}, self.dbConnection, 'SELECT * FROM '..self.tblName)
+            local result = coroutine.yield()
+            allResults = result
         end)
+        coroutine.resume(co)
+        return allResults
+    end
+
+    function callback(qh)
+        local results = dbPoll(qh, 0)
+        coroutine.resume(co, results)
     end
 
     local function findOne(id, callback)
@@ -99,29 +104,20 @@ function dbGenerals:SQLRepo()
 end
 
 function dbGenerals:TableRepo()
-    datas = {}
+    local datas = {}
+    local instance
+
+    local function getInstance()
+        if (not instance) then
+            instance = self:TableRepo()
+        end
+        return instance
+    end
 
     local function init()
-        return Promise.new(function(resolve, reject)
-            self:SQLRepo().findAll()
-            :after(function(data)
-                datas = data
-            end)
-            :catch(function(err)
-                return error(err, 2)
-            end)
-        end)
-        :after(function(data)
-            -- iprint(data)
-        end)
-        :catch(function(err)
-            error(err, 2)
-        end)
-        :finally(function ()
-           print('all done')
-        end)
+        iprint(self:SQLRepo().findAll())
     end
-    
+
     init()
 
     local function create(dto)
@@ -156,7 +152,7 @@ function dbGenerals:TableRepo()
         end
     end
 
-    return {init = init, create = create, delete = delete, update = update, findAll = findAll, findOne = findOne}
+    return {init = init, create = create, delete = delete, update = update, findAll = findAll, findOne = findOne, getInstance = getInstance}
 end
 
 function dbGenerals:create(dto)
@@ -175,13 +171,10 @@ function dbGenerals:update(id, dto)
 end
 
 function dbGenerals:findAll()
-    local repo
-    repo = self:TableRepo().findAll()
-    -- if (not repo) then
-    --     local data = self:SQLRepo().findAll(function(res)
-    --         repo = res
-    --     end)
-    -- end
+    local repo = self:TableRepo().findAll()
+    if (not repo) then
+        repo = self:SQLRepo().findAll()
+    end
     return repo
 end
 
