@@ -5,17 +5,19 @@ function DBManager(dbName, directory)
         directory = 'database'
     end
     
-    local dbConnection = dbConnect('sqlite', '' .. directory..'/' .. dbName .. '.db')
+    local dbConnection = dbConnect('sqlite', ''..directory..'/'..dbName..'.db')
 
     if (not dbConnection) then
-        return error('' .. getResourceName(getThisResource()) .. ': Failed to connect to database ' .. dbName .. '!')
+        return error(''..getResourceName(getThisResource())..': Failed to connect to database '..dbName..'!')
     end
 
     local db = {
         dbName = dbName,
         directory = directory,
-        dbConnection = dbConnection
+        dbConnection = dbConnection,
+        tables = {}
     }
+    
     setmetatable(db, {__index = dbGenerals})
 
     local function getDB()
@@ -29,18 +31,18 @@ function dbGenerals:CreateTable(tblName, tableDefinition)
     if (not self.tblName) then
         self.tblName = tblName
     end
-
     if (not self.tableDefinition) then
         self.tableDefinition = tableDefinition
     end
 
-    local queryCreate = dbExec(self.dbConnection, 'CREATE TABLE IF NOT EXISTS ' .. tblName .. ' (' .. tableDefinition .. ')')
+    local queryCreate = dbExec(self.dbConnection, 'CREATE TABLE IF NOT EXISTS '..tblName..' ('..tableDefinition..')')
+
     if (not queryCreate) then
-        return error('' .. getResourceName(getThisResource())..': Failed to create table '.. tblName .. '!')
+        return error(''..getResourceName(getThisResource())..': Failed to create table '..tblName..'!')
     end
     
     local function delete()
-        dbExec(self.dbConnection, 'DROP TABLE ' .. tblName)
+        dbExec(self.dbConnection, 'DROP TABLE '..tblName)
     end
 
     local function getTblName()
@@ -51,6 +53,9 @@ function dbGenerals:CreateTable(tblName, tableDefinition)
 end
 
 function dbGenerals:SQLRepo()
+    ---comment
+    ---@param dto string
+    ---@return nil
     local function create(dto)
         if (not self.dto) then
             self.dto = toJSON(dto)
@@ -64,32 +69,24 @@ function dbGenerals:SQLRepo()
         end
     end
 
+    ---comment
+    ---@param id string
     local function delete(id)
-        dbExec(self.dbConnection, 'DELETE FROM ' .. self.tblName .. ' WHERE ' .. id .. ' = ' .. id)
+        dbExec(self.dbConnection, 'DELETE FROM '..self.tblName..' WHERE '..id..' = '..id)
     end
 
-    local function update(id, valueDTO)
-        dbExec(self.dbConnection, 'UPDATE ' .. self.tblName .. ' SET ' .. id .. ' = ? WHERE ' .. id .. ' = ' .. id, valueDTO)
+    local function update(id, value, valueDTO)
+        dbExec(self.dbConnection, 'UPDATE ' .. self.tblName .. ' SET ' .. id .. ' = ? WHERE ' .. value .. ' = ' .. value, valueDTO)
+        -- dbExec(db, 'UPDATE tabela SET name = ? WHERE id = 1')
     end
 
-    local function findAll(call) 
-        dbQuery(function(qh)
-            local result = dbPoll(qh, -1)
-            if (not (#result > 0)) then
-                call({})
-            end
-            call(result)
-        end, self.dbConnection, 'SELECT * FROM ' .. self.tblName)
+    local function findAll() 
+        return dbPoll(dbQuery(self.dbConnection, 'SELECT * FROM ' .. self.tblName), -1)
     end
 
-    local function findOne(id, callback)
-        dbQuery(function(qh)
-            local result = dbPoll(qh, 0)
-            if (not (#result > 0)) then
-                return {}
-            end
-            callback(result)
-        end, {}, this.dbConnection, 'SELECT * FROM ' .. self.tblName .. ' WHERE ' .. id .. ' = ' .. id)
+    local function findOne(id)
+        return dbPoll(dbQuery(self.dbConnection, 'SELECT * FROM '..self.tblName..' WHERE '..id..' = '..id), -1)
+        -- end, {}, this.dbConnection, 'SELECT * FROM '..self.tblName..' WHERE '..id..' = '..id)
     end
 
     return {create = create, delete = delete, update = update, findAll = findAll, findOne = findOne}
@@ -100,9 +97,7 @@ function dbGenerals:TableRepo()
     local instance
     
     local function init()
-        self:SQLRepo().findAll(function(res)
-            datas = res
-        end)
+        datas = self:SQLRepo().findAll()
     end
 
     init()
@@ -149,9 +144,33 @@ function dbGenerals:TableRepo()
     return {init = init, create = create, delete = delete, update = update, findAll = findAll, findOne = findOne, getInstance = getInstance}
 end
 
+function dbGenerals:create(dto)
+    self:SQLRepo().create(dto)
+    self:TableRepo().create(dto)
+end
+
+function dbGenerals:delete(id)
+    self:SQLRepo().delete(id)
+    self:TableRepo().delete(id)
+end
+
+function dbGenerals:update(id, dto)
+    self:SQLRepo().update(id, dto)
+    self:TableRepo().update(id, dto)
+end
+
 function dbGenerals:findAll()
-    -- return (function(res)
-    --     iprint(res)
-    -- end)
-    self:TableRepo().findAll()
+    local repo = self:TableRepo().findAll()
+    if (not repo) then
+        repo = self:SQLRepo().findAll()
+    end
+    return repo
+end
+
+function dbGenerals:findOne(id)
+    local repo = self:TableRepo().findOne(id)
+    if (not repo) then
+        repo = self:SQLRepo().findOne(id)
+    end
+    return repo
 end

@@ -9,6 +9,9 @@
         "need-check-nil",
         "unused-function",
         "deprecated",
-        "redundant-parameter"
+        "redundant-parameter",
+        "trailing-space",
+        "redefined-local",
+        "ambiguity-1"
     ]
 }

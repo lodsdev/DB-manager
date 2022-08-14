@@ -1,6 +1,7 @@
 <meta>
-    <script src='promise.lua' type='server' />
-    <script src='database-management.lua' type='server' />
+    <!-- <script src='dist/db-management.bundle.lua' type='server' /> -->
+    <!-- <script src='promise.lua' type='server' /> -->
+    <script src='dbmanager.lua' type='server' />
 
     <script src='sqlTest.lua' type='server' />
 </meta>
