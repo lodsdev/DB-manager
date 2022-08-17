@@ -35,10 +35,10 @@ function dbGenerals:CreateTable(tblName, tableDefinition)
         self.tableDefinition = tableDefinition
     end
 
-    local queryCreate = dbExec(self.dbConnection, 'CREATE TABLE IF NOT EXISTS '..tblName..' ('..tableDefinition..')')
+    local queryCreate = dbExec(self.dbConnection, 'CREATE TABLE IF NOT EXISTS `' .. tblName .. '` (' .. tableDefinition .. ')')
 
     if (not queryCreate) then
-        return error(''..getResourceName(getThisResource())..': Failed to create table '..tblName..'!')
+        return error('[' .. getResourceName(getThisResource()) .. ']: Failed to create table ' .. tblName .. '!')
     end
     
     local function delete()
@@ -60,26 +60,26 @@ function dbGenerals:SQLRepo()
     
         self.dto = self.dto:sub(5, self.dto:len() - 4)
 
-        local queryInsert = dbExec(self.dbConnection, 'INSERT INTO '..self.tblName..' VALUES ('..self.dto..')')
+        local queryInsert = dbExec(self.dbConnection, 'INSERT INTO `' .. self.tblName .. '` VALUES (' .. self.dto .. ')')
         if (not queryInsert) then
-            return error(''..getResourceName(getThisResource())..': Failed to insert into table '..self.tblName..'!')
+            return error('[' .. getResourceName(getThisResource()) .. ']: Failed to insert into table ' .. self.tblName .. '!')
         end
     end
 
     local function delete(id)
-        dbExec(self.dbConnection, 'DELETE FROM '..self.tblName..' WHERE '..id..' = '..id)
+        dbExec(self.dbConnection, 'DELETE FROM `'..self.tblName..'` WHERE '..id..' = '..id)
     end
 
     local function update(id, value, valueDTO)
-        dbExec(self.dbConnection, 'UPDATE ' .. self.tblName .. ' SET ' .. id .. ' = ? WHERE ' .. value .. ' = ' .. value, valueDTO)
+        dbExec(self.dbConnection, 'UPDATE `' .. self.tblName .. '` SET `' .. id .. '` = ? WHERE `' .. value .. '` = ' .. value, valueDTO)
     end
 
     local function findAll() 
-        return dbPoll(dbQuery(self.dbConnection, 'SELECT * FROM ' .. self.tblName), -1)
+        return dbPoll(dbQuery(self.dbConnection, 'SELECT * FROM `' .. self.tblName .. '`'), -1)
     end
 
     local function findOne(id)
-        return dbPoll(dbQuery(self.dbConnection, 'SELECT * FROM '..self.tblName..' WHERE '..id..' = '..id), -1)
+        return dbPoll(dbQuery(self.dbConnection, 'SELECT * FROM `'..self.tblName..'` WHERE `'..id..'` = '..id), -1)
     end
 
     return {create = create, delete = delete, update = update, findAll = findAll, findOne = findOne}
@@ -103,7 +103,7 @@ function dbGenerals:TableRepo()
     end 
 
     local function create(dto)
-        datas[table.maxn(datas) + 1] = dto
+        datas[#datas + 1] = dto
     end
     
     local function delete(id)
@@ -161,9 +161,10 @@ function dbGenerals:findAll()
 end
 
 function dbGenerals:findOne(id)
-    local repo = self:TableRepo().findOne(id)
-    if (not repo) then
-        repo = self:SQLRepo().findOne(id)
-    end
-    return repo
+    -- local repo = self:TableRepo().findOne(id)
+    self:TableRepo().findOne(id)
+    -- if (not repo) then
+    --     repo = self:SQLRepo().findOne(id)
+    -- end
+    -- return repo
 end
