@@ -53,9 +53,6 @@ function dbGenerals:CreateTable(tblName, tableDefinition)
 end
 
 function dbGenerals:SQLRepo()
-    ---comment
-    ---@param dto string
-    ---@return nil
     local function create(dto)
         if (not self.dto) then
             self.dto = toJSON(dto)
@@ -69,15 +66,12 @@ function dbGenerals:SQLRepo()
         end
     end
 
-    ---comment
-    ---@param id string
     local function delete(id)
         dbExec(self.dbConnection, 'DELETE FROM '..self.tblName..' WHERE '..id..' = '..id)
     end
 
     local function update(id, value, valueDTO)
         dbExec(self.dbConnection, 'UPDATE ' .. self.tblName .. ' SET ' .. id .. ' = ? WHERE ' .. value .. ' = ' .. value, valueDTO)
-        -- dbExec(db, 'UPDATE tabela SET name = ? WHERE id = 1')
     end
 
     local function findAll() 
@@ -86,7 +80,6 @@ function dbGenerals:SQLRepo()
 
     local function findOne(id)
         return dbPoll(dbQuery(self.dbConnection, 'SELECT * FROM '..self.tblName..' WHERE '..id..' = '..id), -1)
-        -- end, {}, this.dbConnection, 'SELECT * FROM '..self.tblName..' WHERE '..id..' = '..id)
     end
 
     return {create = create, delete = delete, update = update, findAll = findAll, findOne = findOne}
