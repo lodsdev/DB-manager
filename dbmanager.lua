@@ -70,16 +70,16 @@ function dbGenerals:SQLRepo()
         dbExec(self.dbConnection, 'DELETE FROM `'..self.tblName..'` WHERE '..id..' = '..id)
     end
 
-    local function update(id, value, valueDTO)
-        dbExec(self.dbConnection, 'UPDATE `' .. self.tblName .. '` SET `' .. id .. '` = ? WHERE `' .. value .. '` = ' .. value, valueDTO)
+    local function update(id, value, newValue)
+        dbExec(self.dbConnection, 'UPDATE `' .. self.tblName .. '` SET ' .. id .. ' = ' .. newValue .. ' WHERE ' .. id .. ' = ' .. value)
     end
 
     local function findAll() 
         return dbPoll(dbQuery(self.dbConnection, 'SELECT * FROM `' .. self.tblName .. '`'), -1)
     end
 
-    local function findOne(id)
-        return dbPoll(dbQuery(self.dbConnection, 'SELECT * FROM `'..self.tblName..'` WHERE `'..id..'` = '..id), -1)
+    local function findOne(id, value)
+        return dbPoll(dbQuery(self.dbConnection, 'SELECT * FROM `' .. self.tblName .. '` WHERE `' .. id .. '` = ' .. value), -1)
     end
 
     return {create = create, delete = delete, update = update, findAll = findAll, findOne = findOne}
@@ -95,13 +95,6 @@ function dbGenerals:TableRepo()
 
     init()
 
-    local function getInstance()
-        if (not instance) then
-            instance = self:TableRepo()
-        end
-        return instance
-    end 
-
     local function create(dto)
         datas[#datas + 1] = dto
     end
@@ -114,10 +107,10 @@ function dbGenerals:TableRepo()
         end
     end
 
-    local function update(id, dto)
-        for _, value in ipairs(datas) do
-            if (value[id] == id) then
-                id = dto
+    local function update(id, value, newValue)
+        for _, v in ipairs(datas) do
+            if (v[id] == value) then
+                v[id] = newValue
             end
         end
     end
@@ -126,10 +119,10 @@ function dbGenerals:TableRepo()
         return datas
     end
 
-    local function findOne(id)
-        for _, value in ipairs(datas) do
-            if (value[id] == id) then
-                return value
+    local function findOne(id, value)
+        for _, v in ipairs(datas) do
+            if (v[id] == value) then
+                return v
             end
         end
     end
@@ -147,9 +140,9 @@ function dbGenerals:delete(id)
     self:TableRepo().delete(id)
 end
 
-function dbGenerals:update(id, dto)
-    self:SQLRepo().update(id, dto)
-    self:TableRepo().update(id, dto)
+function dbGenerals:update(id, value, newValue)
+    self:SQLRepo().update(id, value, newValue)
+    self:TableRepo().update(id, value, newValue)
 end
 
 function dbGenerals:findAll()
@@ -160,11 +153,10 @@ function dbGenerals:findAll()
     return repo
 end
 
-function dbGenerals:findOne(id)
-    -- local repo = self:TableRepo().findOne(id)
-    self:TableRepo().findOne(id)
+function dbGenerals:findOne(id, value)
+    local repo = self:TableRepo().findOne(id, value)
     -- if (not repo) then
     --     repo = self:SQLRepo().findOne(id)
     -- end
-    -- return repo
+    return repo
 end
