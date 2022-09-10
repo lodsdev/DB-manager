@@ -1,4 +1,4 @@
-DBTable = {}
+local DBTable = {}
 
 function DBTable:new(dbConnection, tableName)
     local instance = {}
@@ -44,4 +44,8 @@ end
 
 function DBTable:getTblName()
     return self.tableName
+end
+
+function DBTableClass()
+    return DBTable
 end

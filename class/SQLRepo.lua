@@ -1,4 +1,4 @@
-SQLRepo = {}
+local SQLRepo = {}
 
 function SQLRepo:new(dbManager, table)
     local instance = {}
@@ -33,9 +33,11 @@ function SQLRepo:create(dto)
 end
 
 function SQLRepo:delete(id, value)
+    iprint('column: ' .. id .. ', value: ' .. value)
     local queryDelete = dbExec(
         self.dbManager:getDB(), 
-        'DELETE FROM `' .. self.table.tableName .. '` WHERE `' .. id .. '` = `' .. value .. '`'
+        'DELETE FROM `' .. self.table:getTblName() .. '` WHERE `' .. id .. '` = ?',
+        value
     )
 
     if (not queryDelete) then
@@ -45,19 +47,32 @@ function SQLRepo:delete(id, value)
     return true
 end
 
-function SQLRepo:update(id, data)
-    local queryUpdate = dbExec(
+function SQLRepo:deleteAll()
+    local queryDelete = dbExec(
         self.dbManager:getDB(), 
-        'UPDATE `' .. self.table.tableName .. '` SET `' .. data .. '` WHERE `' .. id .. '` = ?',
-        id
+        'DELETE FROM `' .. self.table:getTblName() .. '`'
     )
 
-    if (not queryUpdate) then
-        return error('Error while updating data from table ' .. self.table:getTblName())
+    if (not queryDelete) then
+        return error('Error while deleting data from table ' .. self.table:getTblName())
     end
 
     return true
 end
+
+-- function SQLRepo:update(id, data)
+--     local queryUpdate = dbExec(
+--         self.dbManager:getDB(), 
+--         'UPDATE `' .. self.table.tableName .. '` SET `' .. data .. '` WHERE `' .. id .. '` = ?',
+--         id
+--     )
+
+--     if (not queryUpdate) then
+--         return error('Error while updating data from table ' .. self.table:getTblName())
+--     end
+
+--     return true
+-- end
 
 function SQLRepo:findAll()
     return dbPoll(dbQuery(
@@ -68,12 +83,16 @@ function SQLRepo:findAll()
     )
 end
 
-function SQLRepo:findOne(id)
+function SQLRepo:findOne(id, value)
     return dbPoll(dbQuery(
         self.dbManager:getDB(), 
-        'SELECT * FROM `' .. self.table.tableName .. '` WHERE `' .. id .. '` = ?',
-        id
+        'SELECT * FROM `' .. self.table:getTblName() .. '` WHERE `' .. id .. '` = ?',
+        value
         ), 
         -1
     )
+end
+
+function SQLRepoClass()
+    return SQLRepo
 end
