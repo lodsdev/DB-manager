@@ -7,7 +7,7 @@ function DBManager:new(dbName, directory)
     instance.dbConnection = dbConnect('sqlite', directory)
 
     setmetatable(instance, {
-        __index = DBManager
+        __index = self
     })
         
     return instance

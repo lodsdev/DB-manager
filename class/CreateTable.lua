@@ -7,23 +7,39 @@ function DBTable:new(dbConnection, tableName)
     instance.tableName = tableName
 
     setmetatable(instance, {
-        __index = DBTable
+        __index = self
     })
 
     return instance
 end
 
 function DBTable:create(tableDefinition)
-    dbExec(
+    if (not self.tableDefinition) then
+        self.tableDefinition = tableDefinition
+    end
+
+    local queryCreate = dbExec(
         self.dbConnection, 
-        'CREATE TABLE IF NOT EXISTS ' .. self.tableName .. ' (' .. tableDefinition .. ')'
+        'CREATE TABLE IF NOT EXISTS `' .. self.tableName .. '` (' .. tableDefinition .. ')'
     )
+
+    if (not queryCreate) then
+        return error('Error while creating table ' .. self.tableName)
+    end
+
+    return true
 end
 
 function DBTable:delete()
-    dbExec(
-        self.dbConnection, 'DROP TABLE IF EXISTS ' .. self.tableName
+    local queryDelete = dbExec(
+        self.dbConnection, 'DROP TABLE IF EXISTS `' .. self.tableName
     )
+
+    if (not queryDelete) then
+        return error('Error while deleting table ' .. self.tableName)
+    end
+
+    return true
 end
 
 function DBTable:getTblName()

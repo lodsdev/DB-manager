@@ -7,39 +7,62 @@ function SQLRepo:new(dbManager, table)
     instance.table = table
 
     setmetatable(instance, {
-        __index = SQLRepo
+        __index = self
     })
 
     return instance
 end
 
-function SQLRepo:create()
-    dbExec(
-        self.dbManager:getDB(), 
-        'INSERT INTO ' .. self.tableName .. ' (' .. tableDefinition .. ')'
+function SQLRepo:create(dto)
+    self.dto = toJSON(dto)
+    
+    local tblFormatted = self.dto:sub(5, self.dto:len() - 4)
+    local dbConnection = self.dbManager:getDB()
+    
+    local queryInsert = dbExec(
+        dbConnection, 
+        'INSERT INTO `' .. self.table:getTblName() .. '` VALUES (' .. tblFormatted .. ')'
     )
+
+    if (not queryInsert) then
+        return error('Error while inserting data into table ' .. self.table:getTblName())
+    end
+
+    return true
 end
 
 function SQLRepo:delete(id)
-    dbExec(
+    local queryDelete = dbExec(
         self.dbManager:getDB(), 
-        'DELETE FROM `' .. self.tableName .. '` WHERE `' .. id .. '` = ?',
+        'DELETE FROM `' .. self.table.tableName .. '` WHERE `' .. id .. '` = ?',
         id
     )
+
+    if (not queryDelete) then
+        return error('Error while deleting data from table ' .. self.table:getTblName())
+    end
+
+    return true
 end
 
 function SQLRepo:update(id, data)
-    dbExec(
+    local queryUpdate = dbExec(
         self.dbManager:getDB(), 
-        'UPDATE `' .. self.tableName .. '` SET `' .. data .. '` WHERE `' .. id .. '` = ?',
+        'UPDATE `' .. self.table.tableName .. '` SET `' .. data .. '` WHERE `' .. id .. '` = ?',
         id
     )
+
+    if (not queryUpdate) then
+        return error('Error while updating data from table ' .. self.table:getTblName())
+    end
+
+    return true
 end
 
 function SQLRepo:findAll()
     return dbPoll(dbQuery(
         self.dbManager:getDB(), 
-        'SELECT * FROM `' .. self.tableName .. '`'
+        'SELECT * FROM `' .. self.table.tableName .. '`'
         ), 
         -1
     )
@@ -48,7 +71,7 @@ end
 function SQLRepo:findOne(id)
     return dbPoll(dbQuery(
         self.dbManager:getDB(), 
-        'SELECT * FROM `' .. self.tableName .. '` WHERE `' .. id .. '` = ?',
+        'SELECT * FROM `' .. self.table.tableName .. '` WHERE `' .. id .. '` = ?',
         id
         ), 
         -1

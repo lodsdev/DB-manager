@@ -1,9 +1,8 @@
 addEventHandler('onResourceStart', resourceRoot, function()
     local db = DBManager:new('dbTest', 'assets/database.db')
-    local repo = SQLRepo:new(db, 'tableTest')
-    
-    repo:create({
-        id = 1,
-        name = 'test'
-    })
+    local myTable = DBTable:new(db:getDB(), 'myTable')
+
+    myTable:create(
+        'id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, age INTEGER'
+    )
 end)
