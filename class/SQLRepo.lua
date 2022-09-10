@@ -14,13 +14,14 @@ function SQLRepo:new(dbManager, table)
 end
 
 function SQLRepo:create(dto)
-    self.dto = toJSON(dto)
+    if (self.dto ~= dto) then
+        self.dto = toJSON(dto)
+    end
     
     local tblFormatted = self.dto:sub(5, self.dto:len() - 4)
-    local dbConnection = self.dbManager:getDB()
     
     local queryInsert = dbExec(
-        dbConnection, 
+        self.dbManager:getDB(), 
         'INSERT INTO `' .. self.table:getTblName() .. '` VALUES (' .. tblFormatted .. ')'
     )
 
@@ -31,11 +32,10 @@ function SQLRepo:create(dto)
     return true
 end
 
-function SQLRepo:delete(id)
+function SQLRepo:delete(id, value)
     local queryDelete = dbExec(
         self.dbManager:getDB(), 
-        'DELETE FROM `' .. self.table.tableName .. '` WHERE `' .. id .. '` = ?',
-        id
+        'DELETE FROM `' .. self.table.tableName .. '` WHERE `' .. id .. '` = `' .. value .. '`'
     )
 
     if (not queryDelete) then
