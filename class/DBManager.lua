@@ -2,21 +2,25 @@ local DBManager = {}
 
 function DBManager:new(...)
     local instance = {}
-    local dto = {...}
+    local typeDatabase, dto = ...
 
-    if (type(...) ~= 'table') then
-        instance.dbConnection = dbConnect(dto[1], dto[2] or 'database/file.db')
-    else
-        if (not dto[1]) then
-            return error('No database connection provided')
+    if (typeDatabase ~= 'sqlite' or typeDatabase ~= 'mysql') then
+        return error('Invalid database type', 2)
+    end
+
+    if (not typeDatabase or not dto) then
+        local output = (not typeDatabase and 'Error, define a type to database') or (not dto and 'Error, define a dto to database')
+        return error(output, 2)
+    end
+
+    if (dto ~= 'string') then
+        if (not dto.host or not dto.port or not dto.username or not dto.password or not dto.database) then
+            return error('Invalid database connection provided', 2)
         end
-        if (not dto[1].host or not dto[1].username or not dto[1].password or not dto[1].database) then
-            return error('Invalid database connection provided')
-        end
-        local host, port, username, password, database = dto[1].host, dto[1].port, dto[1].username, dto[1].password, dto[1].database
-        
+        local host, port, username, password, database = dto.host, dto.port, dto.username, dto.password, dto.database
+
         instance.dbConnection = dbConnect(
-            'mysql',
+            typeDatabase,
             'dbname=' .. database ..
             ';host=' .. host ..
             ';port=' .. port ..
@@ -24,12 +28,15 @@ function DBManager:new(...)
             username,
             password
         )
-
-        if (not instance.dbConnection) then
-            return error('Error while connecting to database')
-        end
-
+        
         outputDebugString('Connected to database')
+    else
+        instance.dbConnection = dbConnect(typeDatabase, dto or 'database/file.db')
+        outputDebugString('Connected to database')
+    end
+    
+    if (not instance.dbConnection) then
+        return error('Error while connecting to database', 2)
     end
 
     setmetatable(instance, {
