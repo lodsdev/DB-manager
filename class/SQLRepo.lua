@@ -60,24 +60,25 @@ function SQLRepo:deleteAll()
     return true
 end
 
--- function SQLRepo:update(id, data)
---     local queryUpdate = dbExec(
---         self.dbManager:getDB(), 
---         'UPDATE `' .. self.table.tableName .. '` SET `' .. data .. '` WHERE `' .. id .. '` = ?',
---         id
---     )
+function SQLRepo:update(data, newValue, id, value)
+    local queryUpdate = dbExec(
+        self.dbManager:getDB(), 
+        'UPDATE `' .. self.table:getTblName() .. '` SET ' .. data .. ' = ? WHERE ' .. id .. ' = ?',
+        newValue,
+        value
+    )
 
---     if (not queryUpdate) then
---         return error('Error while updating data from table ' .. self.table:getTblName())
---     end
+    if (not queryUpdate) then
+        return error('Error while updating data from table ' .. self.table:getTblName())
+    end
 
---     return true
--- end
+    return true
+end
 
 function SQLRepo:findAll()
     return dbPoll(dbQuery(
         self.dbManager:getDB(), 
-        'SELECT * FROM `' .. self.table.tableName .. '`'
+        'SELECT * FROM `' .. self.table:getTblName() .. '`'
         ), 
         -1
     )
