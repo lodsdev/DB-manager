@@ -35,7 +35,7 @@ function DBManager:new(...)
     if (not instance.dbConnection) then
         return error('Error while connecting to database', 2)
     end
-    outputDebugString('Connected to database')
+    outputDebugString('Connected to database', 3)
 
     setmetatable(instance, {
         __index = self
