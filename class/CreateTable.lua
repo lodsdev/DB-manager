@@ -6,10 +6,7 @@ function DBTable:new(dbConnection, tableName)
     instance.dbConnection = dbConnection
     instance.tableName = tableName
 
-    setmetatable(instance, {
-        __index = self
-    })
-
+    setmetatable(instance, { __index = self })
     return instance
 end
 
@@ -26,7 +23,6 @@ function DBTable:create(tableDefinition)
     if (not queryCreate) then
         return error('Error while creating table ' .. self.tableName)
     end
-
     return true
 end
 
@@ -38,7 +34,6 @@ function DBTable:delete()
     if (not queryDelete) then
         return error('Error while deleting table ' .. self.tableName)
     end
-
     return true
 end
 
@@ -46,6 +41,6 @@ function DBTable:getTblName()
     return self.tableName
 end
 
-function DBTableClass()
-    return DBTable
+function DBTableClass(dbConnection, tableName)
+    return DBTable:new(dbConnection, tableName)
 end

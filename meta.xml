@@ -3,5 +3,6 @@
     <script src='class/DBManager.lua' type='server' />
     <script src='class/SQLRepo.lua' type='server' />
     <script src='class/TableRepo.lua' type='server' />
+    <script src='class/RepoService.lua' type='server' />
     <script src='sqlTest.lua' type='server' />
 </meta>

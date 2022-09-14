@@ -7,7 +7,6 @@ function RepoService:new(sqlRepo, tableRepo)
     instance.tableRepo = tableRepo
 
     setmetatable(instance, {__index = self})
-
     return instance
 end
 
@@ -42,6 +41,6 @@ function RepoService:findOne(id, value)
     return repo
 end
 
-function RepoServiceClass()
-    return RepoService
+function RepoServiceClass(sqlRepo, tableRepo)
+    return RepoService:new(sqlRepo, tableRepo)
 end

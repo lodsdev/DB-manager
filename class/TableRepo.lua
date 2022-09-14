@@ -7,7 +7,6 @@ function TableRepo:new(sqlRepo)
     
     setmetatable(instance, {__index = self})
     instance:init()
-    
     return instance
 end
 
@@ -64,6 +63,6 @@ function TableRepo:findOne(id, value)
     return false
 end
 
-function TableRepoClass()
-    return TableRepo
+function TableRepoClass(sqlRepo)
+    return TableRepo:new(sqlRepo)
 end
