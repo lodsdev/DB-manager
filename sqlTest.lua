@@ -3,6 +3,7 @@ local myDB
 local DBManager = DBManagerClass()
 local DBTable = DBTableClass()
 local SQLRepo = SQLRepoClass()
+local TableRepo = TableRepoClass()
 
 addEventHandler('onResourceStart', resourceRoot, function()
     myDB = DBManager:new('sqlite', 'database/file.db')
@@ -14,6 +15,6 @@ addEventHandler('onResourceStart', resourceRoot, function()
         age INTEGER
     ]])
 
-    sqlRepo = SQLRepo:new(myDB, myTable)
-    sqlRepo:update()
+    mySQLRepo = SQLRepo:new(myDB, myTable)
+    myRepo = TableRepo:new(mySQLRepo)
 end)

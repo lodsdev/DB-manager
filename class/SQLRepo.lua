@@ -33,7 +33,6 @@ function SQLRepo:create(dto)
 end
 
 function SQLRepo:delete(id, value)
-    iprint('column: ' .. id .. ', value: ' .. value)
     local queryDelete = dbExec(
         self.dbManager:getDB(), 
         'DELETE FROM `' .. self.table:getTblName() .. '` WHERE `' .. id .. '` = ?',
