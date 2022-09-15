@@ -3,10 +3,11 @@ local DBTable = {}
 function DBTable:new(dbConnection, tableName)
     local instance = {}
 
-    instance.dbConnection = dbConnection
-    instance.tableName = tableName
+    private[instance] = {}
+    private[instance].dbConnection = dbConnection
+    private[instance].tableName = tableName
 
-    setmetatable(instance, { __index = self })
+    setmetatable(instance, {__index = self})
     return instance
 end
 
@@ -16,31 +17,33 @@ function DBTable:create(tableDefinition)
     end
 
     local queryCreate = dbExec(
-        self.dbConnection, 
-        'CREATE TABLE IF NOT EXISTS `' .. self.tableName .. '` (' .. tableDefinition .. ')'
+        private[self].dbConnection, 
+        'CREATE TABLE IF NOT EXISTS `' .. private[self].tableName .. '` (' .. tableDefinition .. ')'
     )
 
     if (not queryCreate) then
-        return error('Error while creating table ' .. self.tableName)
+        return error('Error while creating table ' .. private[self].tableName)
     end
+
     return true
 end
 
 function DBTable:delete()
     local queryDelete = dbExec(
-        self.dbConnection, 'DROP TABLE IF EXISTS `' .. self.tableName
+        private[self].dbConnection, 'DROP TABLE IF EXISTS `' .. private[self].tableName .. '`'
     )
 
     if (not queryDelete) then
-        return error('Error while deleting table ' .. self.tableName)
+        return error('Error while deleting table ' .. private[self].tableName)
     end
+
     return true
 end
 
 function DBTable:getTblName()
-    return self.tableName
+    return private[self].tableName
 end
 
-function DBTableClass(dbConnection, tableName)
+function TableClass(dbConnection, tableName)
     return DBTable:new(dbConnection, tableName)
 end

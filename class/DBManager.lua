@@ -1,8 +1,13 @@
 local DBManager = {}
 
+private = {}
+setmetatable(private, {__mode = 'k'})
+
 function DBManager:new(...)
     local instance = {}
     local typeDatabase, dto = ...
+
+    private[instance] = {}
 
     if ((typeDatabase ~= 'sqlite') and (typeDatabase ~= 'mysql')) then
         return error('Invalid database type', 2)
@@ -19,7 +24,7 @@ function DBManager:new(...)
         end
         local host, port, username, password, database = dto.host, dto.port, dto.username, dto.password, dto.database
 
-        instance.dbConnection = dbConnect(
+        private[instance].dbConnection = dbConnect(
             typeDatabase,
             'dbname=' .. database ..
             ';host=' .. host ..
@@ -29,21 +34,21 @@ function DBManager:new(...)
             password
         )
     else
-        instance.dbConnection = dbConnect(typeDatabase, dto or 'database/file.db')
+        private[instance].dbConnection = dbConnect(typeDatabase, dto or 'database/file.db')
     end
     
-    if (not instance.dbConnection) then
+    if (not private[instance].dbConnection) then
         return error('Error while connecting to database', 2)
     end
 
     outputDebugString('Connected to database', 3)
 
-    setmetatable(instance, { __index = self })
+    setmetatable(instance, {__index = self})
     return instance
 end
 
 function DBManager:getDB()
-    return self.dbConnection
+    return private[self].dbConnection
 end
 
 function DBManagerClass(...)

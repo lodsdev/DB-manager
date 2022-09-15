@@ -1,19 +1,18 @@
-
-local myDB
+local service
 
 addEventHandler('onResourceStart', resourceRoot, function()
-    myDB = DBManagerClass('sqlite', 'database/file.db')
-   
-    myTable = DBTableClass(myDB:getDB(), 'users')
+    local myDB = DBManagerClass('sqlite', 'database/file.db')
+    local myTable = TableClass(myDB:getDB(), 'users')
+    local sqlRepo = SQLRepoClass(myDB, myTable)
+    local myRepo = TableRepoClass(sqlRepo)
+
     myTable:create([[
-        id INTEGER PRIMARY KEY AUTOINCREMENT, 
         name TEXT, 
-        age INTEGER
+        pass TEXT
     ]])
 
-    sqlRepo = SQLRepoClass(myDB, myTable)
-    myRepo = TableRepoClass(sqlRepo)
+    service = RepoServiceClass(sqlRepo, myRepo)
 
-    -- local service = RepoServiceClass(sqlRepo, myRepo)
+    -- service:
 end)
 

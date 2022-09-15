@@ -3,7 +3,8 @@ local TableRepo = {}
 function TableRepo:new(sqlRepo)
     local instance = {}
 
-    instance.sqlRepo = sqlRepo
+    private[instance] = {}
+    private[instance].sqlRepo = sqlRepo
     
     setmetatable(instance, {__index = self})
     instance:init()
@@ -12,7 +13,7 @@ end
 
 function TableRepo:init()
     if (not self.datas) then
-        self.datas = self.sqlRepo:findAll()
+        self.datas = private[self].sqlRepo:findAll()
     end
     return self.datas
 end
@@ -41,6 +42,19 @@ function TableRepo:deleteAll()
     if (self.datas) then
         self.datas = {}
         return true
+    end
+    return false
+end
+
+function TableRepo:update(data, newValue, id, value)
+    for _, atb in ipairs(self.datas) do
+        if (not atb[id] or not atb[data]) then
+            return
+        end
+        if (atb[id] == value and atb[data] ~= newValue) then
+            atb[data] = newValue
+            return true
+        end
     end
     return false
 end

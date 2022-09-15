@@ -1,4 +1,5 @@
 <meta>
+    <mta_min_version server='1.5.2' />
     <script src='class/CreateTable.lua' type='server' />
     <script src='class/DBManager.lua' type='server' />
     <script src='class/SQLRepo.lua' type='server' />
