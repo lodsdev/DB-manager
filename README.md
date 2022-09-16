@@ -83,7 +83,7 @@ DELETE FROM ... WHERE name = "LODS"
 service:update("name", "LODIS", "id", 1)
 ```
 ```sql
-UPDATE FROM ... SET name = "LODIS" WHERE id = 1
+UPDATE ... SET name = "LODIS" WHERE id = 1
 ```
 
 
