@@ -2,7 +2,7 @@
 
 ## About
 
-This is library to easily manipulation of database in MTA:SA, with a clean sintaxe and optimized. You don't need worried about in use **Queries** several times, this library manipulate a table in **location** to include all data in cache, this allows you not to look for the data directly in the database, but in the cache.
+This is library for easy manipulation of database in MTA:SA, with a clean syntax and optimized. You don't need to worry about using **Queries** several times, this library manipulates a table in **location** to include all data in cache, this allows you not to look for the data directly in the database, but in the cache.
 
 ## Getting started
 ## Example (using MySQL)
@@ -33,7 +33,7 @@ tbl:create([[
 ]]
 ```
 
-To receive data in location, this necessary instantiate the class of service.
+To receive data in location, it is necessary instantiate the service class.
 
 ```lua
 local service = RepoServiceClass(sql, repo)
@@ -59,7 +59,7 @@ INSERT INTO ... VALUES(1, "LODS", 20)
 ```
 
 ## Simple SELECT queries
-You can use `findAll()` method to get all datas.
+You can use `findAll()` method to get all data.
 
 ```lua
 service:findOne("name", "LODS")
@@ -69,7 +69,7 @@ SELECT FROM ... WHERE name = "LODS"
 ```
 
 ## Simple DELETE queries
-You can use `deleteAll()` method to delete all datas.
+You can use `deleteAll()` method to delete all data.
 
 ```lua
 service:delete("name", "LODS")
@@ -89,7 +89,7 @@ UPDATE ... SET name = "LODIS" WHERE id = 1
 
 ## Support
 
-If there is some question, contact via Discord: **LODS#8109** or e-mail **contact@lods.dev**
+If you have any question, contact me via Discord: **LODS#8109** or send an e-mail **contact@lods.dev**
 
 ## License
 
