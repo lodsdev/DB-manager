@@ -51,31 +51,40 @@ local db = DBManagerClass("sqlite", "database/file.db")
 First, a simple example.
 
 ```lua
-service:create({1, 'LODS', 20})
+service:create({1, "LODS", 20})
+```
+
+```sql
+INSERT INTO ... VALUES(1, "LODS", 20)
 ```
 
 ## Simple SELECT queries
 You can use `findAll()` method to get all datas.
 
 ```lua
-service:findOne('name', 'LODS')
+service:findOne("name", "LODS")
+```
+```sql
+SELECT FROM ... WHERE name = "LODS"
 ```
 
 ## Simple DELETE queries
 You can use `deleteAll()` method to delete all datas.
 
 ```lua
-service:delete('name', 'LODS')
+service:delete("name", "LODS")
+```
+```sql
+DELETE FROM ... WHERE name = "LODS"
 ```
 
 ## Simple UPDATE queries
 ```lua
-service:update('name', 'LODS', 'id', 1)
+service:update("name", "LODIS", "id", 1)
 ```
-
-## Documentation
-
-This work is in progress...
+```sql
+UPDATE FROM ... SET name = "LODIS" WHERE id = 1
+```
 
 
 ## Support
