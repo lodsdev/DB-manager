@@ -1,6 +1,6 @@
 local DBManager = {}
 
-private = {}
+local private = {}
 setmetatable(private, {__mode = 'k'})
 
 function DBManager:new(...)

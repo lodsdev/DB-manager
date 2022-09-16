@@ -7,12 +7,13 @@ addEventHandler('onResourceStart', resourceRoot, function()
     local myRepo = TableRepoClass(sqlRepo)
 
     myTable:create([[
-        name TEXT, 
-        pass TEXT
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT,
+        age INTEGER
     ]])
 
     service = RepoServiceClass(sqlRepo, myRepo)
 
-    -- service:
+    service:update()
 end)
 
