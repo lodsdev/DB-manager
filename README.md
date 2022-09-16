@@ -26,9 +26,10 @@ Now, we will create our first table.
 
 ```lua
 tbl:create([[
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT,
-    age INTEGER
+    `id` int(11) NOT NULL AUTO_INCREMENT,
+    `name` varchar(255) NOT NULL,
+    `age` int(11) NOT NULL,
+    PRIMARY KEY (`id`)
 ]]
 ```
 
@@ -46,46 +47,35 @@ local db = DBManagerClass("sqlite", "database/file.db")
 
 ## Model Querying
 
-# Simple INSERT queries
+## Simple INSERT queries
+First, a simple example.
 
 ```lua
 service:create({1, 'LODS', 20})
 ```
 
-# Simple SELECT queries
+## Simple SELECT queries
+You can use `findAll()` method to get all datas.
+
 ```lua
 service:findOne('name', 'LODS')
 ```
 
-# Simple DELETE queries
+## Simple DELETE queries
+You can use `deleteAll()` method to delete all datas.
+
 ```lua
 service:delete('name', 'LODS')
 ```
 
-# Simple UPDATE queries
+## Simple UPDATE queries
 ```lua
 service:update('name', 'LODS', 'id', 1)
 ```
 
-# Others queries
-SELECT ALL queries
-```lua
-local result = service:findAll()
-```
+## Documentation
 
-DELETE ALL queries
-```lua
-service:deleteAll()
-```
-
-
-### Unordered
-
-* Item 1
-* Item 2
-* Item 2a
-* Item 2b
-
+This work is in progress...
 
 
 ## Support
