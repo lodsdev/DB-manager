@@ -1,11 +1,18 @@
 addEventHandler('onResourceStart', resourceRoot, function()
-    local db = DBManagerClass('sqlite', 'database/file.db')
-    local myTbl = TableClass(db:getDB(), 'test')
+    local db = DBManagerClass("mysql", {
+        host = "localhost",
+        port = 3306,
+        username = "root",
+        password = "",
+        database = "users"
+    })
+    local myTbl = TableClass(db:getDB(), 'tests')
 
     myTbl:create([[
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        age INTEGER NOT NULL
+        `id` int(11) NOT NULL AUTO_INCREMENT,
+        `name` varchar(255) NOT NULL,
+        `age` int(11) NOT NULL,
+        PRIMARY KEY (`id`)
     ]])
 
     local sql = SQLRepoClass(db, myTbl)

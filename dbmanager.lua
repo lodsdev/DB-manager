@@ -75,7 +75,7 @@ function DBTable:create(tableDefinition)
     )
 
     if (not queryCreate) then
-        return error('Error while creating table ' .. private[self].tableName)
+        return error('Error while creating table ' .. private[self].tableName, 2)
     end
 
     return true
@@ -87,7 +87,7 @@ function DBTable:delete()
     )
 
     if (not queryDelete) then
-        return error('Error while deleting table ' .. private[self].tableName)
+        return error('Error while deleting table ' .. private[self].tableName, 2)
     end
 
     return true
@@ -123,7 +123,7 @@ function SQLRepo:create(dto)
     )
 
     if (not queryString) then
-        return error('Error while inserting data into table ' .. private[self].tbl:getTblName())
+        return error('Error while inserting data into table ' .. private[self].tbl:getTblName(), 2)
     end
 
     return true
@@ -137,7 +137,7 @@ function SQLRepo:delete(id, value)
     )
 
     if (not queryDelete) then
-        return error('Error while deleting data from table ' .. private[self].tbl:getTblName())
+        return error('Error while deleting data from table ' .. private[self].tbl:getTblName(), 2)
     end
 
     return true
@@ -150,7 +150,7 @@ function SQLRepo:deleteAll()
     )
 
     if (not queryDelete) then
-        return error('Error while deleting data from table ' .. private[self].tbl:getTblName())
+        return error('Error while deleting data from table ' .. private[self].tbl:getTblName(), 2)
     end
 
     return true
@@ -165,7 +165,7 @@ function SQLRepo:update(data, newValue, id, value)
     )
 
     if (not queryUpdate) then
-        return error('Error while updating data from table ' .. private[self].tbl:getTblName())
+        return error('Error while updating data from table ' .. private[self].tbl:getTblName(), 2)
     end
 
     return true
