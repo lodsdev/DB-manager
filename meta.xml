@@ -1,5 +1,0 @@
-<meta>
-    <mta_min_version server='1.5.2' />
-    <script src='dbmanager.lua' type='server' />
-    <script src='test.lua' type='server' />
-</meta>
