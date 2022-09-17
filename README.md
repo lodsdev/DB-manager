@@ -7,7 +7,7 @@ This is library for easy manipulation of database in MTA:SA, with a clean syntax
 ## Getting started
 ## Example (using MySQL)
 
-To get started, you need instantiate the classes. To example we will create table for users.
+To get started, first download the file `dbmanager.lua` and put in your resource, you need instantiate the classes in script. To example we will create table for users.
 
 ```lua
 local db = DBManagerClass("mysql", {
