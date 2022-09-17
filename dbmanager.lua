@@ -117,7 +117,7 @@ function SQLRepo:create(dto)
     end
 
     local tblFormatted = self.dto:sub(5, self.dto:len() - 4)
-    local queryString = dbQuery(
+    local queryString = dbExec(
         private[self].dbManager:getDB(), 
         'INSERT INTO `' .. private[self].tbl:getTblName() .. '` VALUES (' .. tblFormatted .. ')'
     )
