@@ -36,7 +36,7 @@ function DBManager:new(...)
     else
         private[instance].dbConnection = dbConnect(typeDatabase, dto or 'database/file.db')
     end
-    
+
     if (not private[instance].dbConnection) then
         return error('Error while connecting to database', 2)
     end
@@ -70,7 +70,7 @@ function DBTable:create(tableDefinition)
     end
 
     local queryCreate = dbExec(
-        private[self].dbConnection, 
+        private[self].dbConnection,
         'CREATE TABLE IF NOT EXISTS `' .. private[self].tableName .. '` (' .. tableDefinition .. ')'
     )
 
@@ -113,16 +113,16 @@ end
 
 function SQLRepo:create(dto)
     if (self.dto ~= dto) then
-        self.dto = toJSON(dto)
+        self.dto = dto
     end
 
-    local tblFormatted = self.dto:sub(5, self.dto:len() - 4)
-    local queryString = dbExec(
-        private[self].dbManager:getDB(), 
+    local tblFormatted = table.concat(self.dto, ', ')
+    local queryInsert = dbExec(
+        private[self].dbManager:getDB(),
         'INSERT INTO `' .. private[self].tbl:getTblName() .. '` VALUES (' .. tblFormatted .. ')'
     )
 
-    if (not queryString) then
+    if (not queryInsert) then
         return error('Error while inserting data into table ' .. private[self].tbl:getTblName(), 2)
     end
 
@@ -131,7 +131,7 @@ end
 
 function SQLRepo:delete(id, value)
     local queryDelete = dbExec(
-        private[self].dbManager:getDB(), 
+        private[self].dbManager:getDB(),
         'DELETE FROM `' .. private[self].tbl:getTblName() .. '` WHERE `' .. id .. '` = ?',
         value
     )
@@ -144,12 +144,12 @@ function SQLRepo:delete(id, value)
 end
 
 function SQLRepo:deleteAll()
-    local queryDelete = dbExec(
-        private[self].dbManager:getDB(), 
+    local queryDeleteAll = dbExec(
+        private[self].dbManager:getDB(),
         'DELETE FROM `' .. private[self].tbl:getTblName() .. '`'
     )
 
-    if (not queryDelete) then
+    if (not queryDeleteAll) then
         return error('Error while deleting data from table ' .. private[self].tbl:getTblName(), 2)
     end
 
@@ -158,7 +158,7 @@ end
 
 function SQLRepo:update(data, newValue, id, value)
     local queryUpdate = dbExec(
-        private[self].dbManager:getDB(), 
+        private[self].dbManager:getDB(),
         'UPDATE `' .. private[self].tbl:getTblName() .. '` SET ' .. data .. ' = ? WHERE ' .. id .. ' = ?',
         newValue,
         value
@@ -173,16 +173,16 @@ end
 
 function SQLRepo:findAll()
     return dbPoll(dbQuery(
-        private[self].dbManager:getDB(), 
+        private[self].dbManager:getDB(),
         'SELECT * FROM `' .. private[self].tbl:getTblName() .. '`'
-        ), 
+        ),
         -1
     )
 end
 
 function SQLRepo:findOne(id, value)
     return dbPoll(dbQuery(
-        private[self].dbManager:getDB(), 
+        private[self].dbManager:getDB(),
         'SELECT * FROM `' .. private[self].tbl:getTblName() .. '` WHERE `' .. id .. '` = ?',
         value
         ),
@@ -197,7 +197,7 @@ function TableRepo:new(sqlRepo)
 
     private[instance] = {}
     private[instance].sqlRepo = sqlRepo
-    
+
     setmetatable(instance, {__index = self})
     instance:init()
     return instance
@@ -285,7 +285,7 @@ end
 function RepoService:create(data)
     private[self].sqlRepo:create(data)
     private[self].tableRepo:create(data)
-end 
+end
 
 function RepoService:delete(id, value)
     private[self].sqlRepo:delete(id, value)
@@ -307,7 +307,6 @@ function RepoService:findAll()
     if (not repo) then
         repo = private[self].sqlRepo:findAll()
     end
-    return repo
 end
 
 function RepoService:findOne(id, value)
