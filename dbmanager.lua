@@ -7,6 +7,8 @@ function DBManager:new(...)
     local instance = {}
     local typeDatabase, dto = ...
 
+    instance.messageConnect = "Connected to database"
+
     private[instance] = {}
 
     if ((typeDatabase ~= 'sqlite') and (typeDatabase ~= 'mysql')) then
@@ -14,7 +16,7 @@ function DBManager:new(...)
     end
 
     if (not typeDatabase or not dto) then
-        local output = (not typeDatabase and 'Error, define a type to database') or (not dto and 'Error, define a dto to database')
+        local output = (not typeDatabase and 'Error, define a type to database') or (not dto and 'Error, define a dto or a directory to database')
         return error(output, 2)
     end
 
@@ -41,7 +43,7 @@ function DBManager:new(...)
         return error('Error while connecting to database', 2)
     end
 
-    outputDebugString('Connected to database', 3)
+    outputDebugString(instance.messageConnect, 3)
 
     setmetatable(instance, {__index = self})
     return instance
@@ -112,7 +114,7 @@ function SQLRepo:new(dbManager, tbl)
 end
 
 function SQLRepo:create(dto)
-    if (self.dto ~= dto) then
+    if (not self.dto or self.dto ~= dto) then
         self.dto = dto
     end
 
