@@ -25,7 +25,7 @@ myTable:create([[
     name VARCHAR(255) NOT NULL,
     age INT NOT NULL,
     PRIMARY KEY (id)
-]]
+]])
 ```
 
 To receive data in location, it is necessary instantiate the service class.
