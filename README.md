@@ -46,7 +46,7 @@ local db = DBManagerClass("sqlite", "database/file.db")
 First, a simple example.
 
 ```lua
-service:create({1, "'LODS'", 20})
+service:create({1, "LODS", 20})
 ```
 
 ```sql
