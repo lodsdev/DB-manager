@@ -1,10 +1,8 @@
 addEventHandler('onResourceStart', resourceRoot, function()
     local db = DBManagerClass("sqlite", 'database/db.sqlite')
-    local myTbl = TableClass(db:getDB(), 'tests')
+    local myTbl = TableClass(db:getConnection(), 'tests')
+    local service = RepoServiceClass(myTbl)
 
-    local sql = SQLRepoClass(db, myTbl)
-    local repo = TableRepoClass(sql)
-    local service = RepoServiceClass(sql, repo)
-
-    local allResults = service:create({4, "'Michael'", 20})
+    -- service:create({5, "LODIS", 20})
+    service:delete('id', 5)
 end)

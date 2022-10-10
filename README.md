@@ -17,26 +17,21 @@ local db = DBManagerClass("mysql", {
     password = "myPass123",
     database = "users"
 })
-local tbl = TableClass(db:getDB(), "myTable")
-local sql = SQLRepoClass(db, tbl)
-local repo = TableRepoClass(sql)
-```
+local myTable = TableClass(db:getConnection(), "myTable")
 
-Now, we will create our first table.
-
-```lua
-tbl:create([[
-    `id` int(11) NOT NULL AUTO_INCREMENT,
-    `name` varchar(255) NOT NULL,
-    `age` int(11) NOT NULL,
-    PRIMARY KEY (`id`)
+-- Create table
+myTable:create([[
+    id INT NOT NULL AUTO_INCREMENT,
+    name VARCHAR(255) NOT NULL,
+    age INT NOT NULL,
+    PRIMARY KEY (id)
 ]]
 ```
 
 To receive data in location, it is necessary instantiate the service class.
 
 ```lua
-local service = RepoServiceClass(sql, repo)
+local service = RepoServiceClass(myTable)
 ```
 
 ## Example (using SQLite)

@@ -1,4 +1,8 @@
 local DBManager = {}
+local DBTable = {}
+local SQLRepo = {}
+local TableRepo = {}
+local RepoService = {}
 
 local private = {}
 setmetatable(private, {__mode = 'k'})
@@ -49,20 +53,26 @@ function DBManager:new(...)
     return instance
 end
 
-function DBManager:getDB()
+function DBManager:getConnection()
     return private[self].dbConnection
 end
 
-local DBTable = {}
+
 
 function DBTable:new(dbConnection, tableName)
     local instance = {}
-
+    
+    
     private[instance] = {}
     private[instance].dbConnection = dbConnection
     private[instance].tableName = tableName
-
+    
+    
     setmetatable(instance, {__index = self})
+    
+    instance.sql = SQLRepo:new(private[instance].dbConnection, instance)
+    instance.repo = TableRepo:new(instance.sql)
+    
     return instance
 end
 
@@ -71,10 +81,7 @@ function DBTable:create(tableDefinition)
         self.tableDefinition = tableDefinition
     end
 
-    local queryCreate = dbExec(
-        private[self].dbConnection,
-        'CREATE TABLE IF NOT EXISTS `' .. private[self].tableName .. '` (' .. tableDefinition .. ')'
-    )
+    local queryCreate = dbExec(private[self].dbConnection, 'CREATE TABLE IF NOT EXISTS `' .. private[self].tableName .. '` (' .. tableDefinition .. ')')
 
     if (not queryCreate) then
         return error('Error while creating table ' .. private[self].tableName, 2)
@@ -84,9 +91,7 @@ function DBTable:create(tableDefinition)
 end
 
 function DBTable:delete()
-    local queryDelete = dbExec(
-        private[self].dbConnection, 'DROP TABLE IF EXISTS `' .. private[self].tableName .. '`'
-    )
+    local queryDelete = dbExec(private[self].dbConnection, 'DROP TABLE IF EXISTS `' .. private[self].tableName .. '`')
 
     if (not queryDelete) then
         return error('Error while deleting table ' .. private[self].tableName, 2)
@@ -100,13 +105,13 @@ function DBTable:getTblName()
 end
 
 
-local SQLRepo = {}
 
-function SQLRepo:new(dbManager, tbl)
+
+function SQLRepo:new(dbConnection, tbl)
     local instance = {}
 
     private[instance] = {}
-    private[instance].dbManager = dbManager
+    private[instance].dbConnection = dbConnection
     private[instance].tbl = tbl
 
     setmetatable(instance, {__index = self})
@@ -115,14 +120,11 @@ end
 
 function SQLRepo:create(dto)
     if (not self.dto or self.dto ~= dto) then
-        self.dto = dto
+        self.dto = toJSON(dto)
     end
 
-    local tblFormatted = table.concat(self.dto, ', ')
-    local queryInsert = dbExec(
-        private[self].dbManager:getDB(),
-        'INSERT INTO `' .. private[self].tbl:getTblName() .. '` VALUES (' .. tblFormatted .. ')'
-    )
+    local tblFormatted = self.dto:sub(5, self.dto:len() - 4)
+    local queryInsert = dbExec(private[self].dbConnection, 'INSERT INTO `' .. private[self].tbl:getTblName() .. '` VALUES (' .. tblFormatted .. ')')
 
     if (not queryInsert) then
         return error('Error while inserting data into table ' .. private[self].tbl:getTblName(), 2)
@@ -132,11 +134,7 @@ function SQLRepo:create(dto)
 end
 
 function SQLRepo:delete(id, value)
-    local queryDelete = dbExec(
-        private[self].dbManager:getDB(),
-        'DELETE FROM `' .. private[self].tbl:getTblName() .. '` WHERE `' .. id .. '` = ?',
-        value
-    )
+    local queryDelete = dbExec(private[self].dbConnection, 'DELETE FROM `' .. private[self].tbl:getTblName() .. '` WHERE `' .. id .. '` = ?', value)
 
     if (not queryDelete) then
         return error('Error while deleting data from table ' .. private[self].tbl:getTblName(), 2)
@@ -146,10 +144,7 @@ function SQLRepo:delete(id, value)
 end
 
 function SQLRepo:deleteAll()
-    local queryDeleteAll = dbExec(
-        private[self].dbManager:getDB(),
-        'DELETE FROM `' .. private[self].tbl:getTblName() .. '`'
-    )
+    local queryDeleteAll = dbExec(private[self].dbConnection, 'DELETE FROM `' .. private[self].tbl:getTblName() .. '`')
 
     if (not queryDeleteAll) then
         return error('Error while deleting data from table ' .. private[self].tbl:getTblName(), 2)
@@ -160,7 +155,7 @@ end
 
 function SQLRepo:update(data, newValue, id, value)
     local queryUpdate = dbExec(
-        private[self].dbManager:getDB(),
+        private[self].dbConnection, 
         'UPDATE `' .. private[self].tbl:getTblName() .. '` SET ' .. data .. ' = ? WHERE ' .. id .. ' = ?',
         newValue,
         value
@@ -174,17 +169,12 @@ function SQLRepo:update(data, newValue, id, value)
 end
 
 function SQLRepo:findAll()
-    return dbPoll(dbQuery(
-        private[self].dbManager:getDB(),
-        'SELECT * FROM `' .. private[self].tbl:getTblName() .. '`'
-        ),
-        -1
-    )
+    return dbPoll(dbQuery(private[self].dbConnection, 'SELECT * FROM `' .. private[self].tbl:getTblName() .. '`'), -1)
 end
 
 function SQLRepo:findOne(id, value)
     return dbPoll(dbQuery(
-        private[self].dbManager:getDB(),
+        private[self].dbConnection,
         'SELECT * FROM `' .. private[self].tbl:getTblName() .. '` WHERE `' .. id .. '` = ?',
         value
         ),
@@ -192,7 +182,7 @@ function SQLRepo:findOne(id, value)
     )
 end
 
-local TableRepo = {}
+
 
 function TableRepo:new(sqlRepo)
     local instance = {}
@@ -214,7 +204,7 @@ end
 
 function TableRepo:create(data)
     if (self.datas) then
-        self.datas[#self.datas+1] = data
+        self.datas[#self.datas + 1] = data
         return true
     end
     return false
@@ -271,14 +261,15 @@ function TableRepo:findOne(id, value)
     return false
 end
 
-local RepoService = {}
 
-function RepoService:new(sqlRepo, tableRepo)
+
+
+function RepoService:new(tbl)
     local instance = {}
 
     private[instance] = {}
-    private[instance].sqlRepo = sqlRepo
-    private[instance].tableRepo = tableRepo
+    private[instance].sqlRepo = tbl.sql
+    private[instance].tableRepo = tbl.repo
 
     setmetatable(instance, {__index = self})
     return instance
@@ -340,6 +331,6 @@ function TableRepoClass(sqlRepo)
     return TableRepo:new(sqlRepo)
 end
 
-function RepoServiceClass(sqlRepo, tableRepo)
-    return RepoService:new(sqlRepo, tableRepo)
+function RepoServiceClass(tbl)
+    return RepoService:new(tbl)
 end
