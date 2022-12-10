@@ -81,11 +81,6 @@ service:update("name", "LODIS", "id", 1)
 UPDATE ... SET name = "LODIS" WHERE id = 1
 ```
 
-
-## Support
-
-If you have any question, contact me via Discord: **LODS#8109** or send an e-mail **contact@lods.dev**
-
 ## License
 
 [Click here to see the license.](https://github.com/lodsdev/database-management/blob/main/MIT-LICENSE.txt)
