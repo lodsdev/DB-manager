@@ -62,11 +62,9 @@ end
 function DBTable:new(dbConnection, tableName)
     local instance = {}
     
-    
     private[instance] = {}
     private[instance].dbConnection = dbConnection
     private[instance].tableName = tableName
-    
     
     setmetatable(instance, {__index = self})
     
