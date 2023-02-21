@@ -87,8 +87,20 @@ local function isTable(tbl)
     return type(tbl) == 'table'
 end
 
+local function isString(str)
+    return type(str) == 'string'
+end
+
+local function isNumber(num)
+    return type(num) == 'number'
+end
+
 local function isBoolean(bool)
     return type(bool) == 'boolean'
+end
+
+local function isNil(nilValue)
+    return type(nilValue) == 'nil'
 end
 
 local function getTblSize(tbl)
@@ -99,7 +111,7 @@ local function getTblSize(tbl)
     return length
 end
 
-local function convertTableFromPairsToIpairs(tbl)
+local function pairsToIpairs(tbl)
     local newTbl = {}
     for k, v in pairs(tbl) do
         newTbl[#newTbl+1] = { k, v }
@@ -119,30 +131,240 @@ local function tableReverse(tbl, callback)
     return newTbl
 end
 
+local function async(f, callback, ...)
+    local asyncCoroutine = coroutine.create(f)
+    local function step(...)
+        if (coroutine.status(asyncCoroutine) == 'dead') then
+            if (callback) then callback(...) end
+        else
+            local success, result = coroutine.resume(asyncCoroutine, ...)
+            if (success) then
+                step(result)
+            else
+                error(result, 2)
+            end
+        end
+    end
+    step(...)
+end
+
+local function tblFilter(tbl, callback)
+    if (not tbl or not callback) then return nil end
+    for k, v in pairs(tbl) do
+        local exec = callback(k, v)
+        if (exec) then
+            return k, v
+        end
+    end
+end
+
+local CONSTRAINTS_DATA = {
+    allowNull = 'NOT NULL',
+    unique = 'UNIQUE',
+    default = 'DEFAULT',
+    check = 'CHECK',
+    primaryKey = 'PRIMARY KEY',
+    foreingKey = 'FOREIGN KEY',
+    autoIncrement = 'AUTO_INCREMENT',
+    references = 'REFERENCES',
+    onDelete = 'ON DELETE',
+    onUpdate = 'ON UPDATE',
+    comment = 'COMMENT',
+    defaultValue = 'DEFAULT',
+}
+
+local CONSTRAINT_ORDER = {
+    "type",
+    "autoIncrement",
+    "allowNull",
+    "unique",
+    "defaultValue",
+    "check",
+    "references",
+    "onDelete",
+    "onUpdate",
+    "comment",
+    "primaryKey",
+    "foreignKey"
+}
+
+local function addConstraintToQuery(query, key, value)
+    local constraintOrderIndex = 1
+    local addedConstraint = false
+    while (constraintOrderIndex <= #CONSTRAINT_ORDER) do
+        local constraint = CONSTRAINT_ORDER[constraintOrderIndex]
+        if (constraint ~= 'type') then
+            if (constraint == 'allowNull' and value[constraint] == false) then
+                query = query .. " " .. CONSTRAINTS_DATA[constraint]
+            elseif (constraint ~= 'primaryKey' and constraint ~= 'allowNull' and value[constraint]) then
+                query = query .. " " .. CONSTRAINTS_DATA[constraint]
+            end
+            addedConstraint = true
+        end
+        constraintOrderIndex = constraintOrderIndex + 1
+    end
+    return query
+end
+
+local DEBUG_RUNNING_DEFAULT = 'DBManager RUNNING (Default): '
+
+local crud = {
+    sync = function(self)
+        return async(function()
+            local prepareQuery = dbPrepareString(self.db:getConnection(), self.queryDefine)
+            if (not prepareQuery) then
+                error('DBManager: Error in prepare query', 2)
+            end
+    
+            local query = dbExec(self.db:getConnection(), prepareQuery)
+            if (not query) then
+                error('DBManager: Error in query', 2)
+            end
+            
+            return query
+        end, function()
+            local valuesInDB = self.valuesInDB
+            local strValues = ''
+            for key, value in ipairs(valuesInDB) do
+                if (key > 1) then
+                    strValues = strValues .. ', '
+                end
+
+                strValues = strValues .. '`' .. value .. '`'
+            end
+            local querySelect = 'SELECT ' .. strValues .. ' FROM `' .. self.tableName .. '` AS `' .. self.tableName .. '`'
+            local result, numAffectedRows, lastInsertId  = dbPoll(dbQuery(self.db:getConnection(), querySelect), -1)
+            if (not (#result > 0)) then
+                return false
+            end
+    
+            self.datas = result
+            outputDebugString(DEBUG_RUNNING_DEFAULT .. querySelect)
+
+            return result, numAffectedRows, lastInsertId
+        end)
+    end,
+
+    create = function(self, data)
+        local query = 'INSERT INTO `' .. self.tableName .. '` ('
+        local values = ' VALUES ('
+        local i = 0
+
+        if (self.primaryKey) then
+            query = query .. "`" .. self.primaryKey .. "`, "
+            values = values .. "" .. #self.datas + 1 .. ", "
+        end
+
+        for key, value in pairs(data) do
+            if (i > 0) then
+                query = query .. ', '
+                values = values .. ', '
+            end
+
+            query = query .. "`" .. key .. "`"
+
+            if (isString(value)) then
+                value = "'" .. value .. "'"
+            elseif (isBoolean(value)) then
+                value = (value) and 1 or 0
+            elseif (isTable(value)) then
+                value = "'" .. toJSON(value) .. "'"
+            elseif (isNil(value)) then
+                value = 'NULL'
+            end
+
+            values = values .. value
+
+            i = i + 1
+        end
+
+        query = query .. ')' .. values .. ')'
+        
+        local queryString = dbPrepareString(self.db:getConnection(), query)
+        if (not queryString) then
+            return false
+        end
+        
+        local queryExec = dbExec(self.db:getConnection(), queryString)
+        if (not queryExec) then
+            return false
+        end
+
+        self.datas[#self.datas+1] = data
+
+        outputDebugString('DB Manager RUNNING: ' .. query)
+        return data
+    end,
+
+    findAll = function(self, data)
+        if (data) then
+            assert(data.attributes or data.where, 'DBManager: Invalid data (findAll)')
+
+            if (data.where) then
+                local where = data.where
+                local rows = self.datas
+                local whereClause = {}
+                local results = {}
+                
+                for i, row in ipairs(rows) do
+                    local match = true
+                    for j, attribute in pairs(where) do
+                        if (row[j] ~= attribute) then
+                            match = false
+                            break
+                        end
+                        whereClause[#whereClause+1] = '`' .. self.tableName .. '`.`' .. j .. '` = ' .. attribute .. ''
+                    end
+                    if (match) then
+                        results[#results+1] = row
+                    end
+                end
+
+                outputDebugString(DEBUG_RUNNING_DEFAULT .. 'SELECT * FROM `' .. self.tableName .. '` WHERE ' .. table.concat(whereClause, ', '))
+                return results
+            else
+                local attributes = data.attributes
+                local attributeList = table.concat(attributes, ', ')
+                local rows = self.datas
+
+                local results = {}
+                for _, row in ipairs(rows) do
+                    local result = {}
+                    for _, attribute in ipairs(attributes) do
+                        result[attribute] = row[attribute]
+                    end
+                    results[#results+1] = result
+                end
+
+                outputDebugString(DEBUG_RUNNING_DEFAULT .. 'SELECT ' .. attributeList .. ' FROM `' .. self.tableName .. '`')
+                return results
+            end
+        end
+        return self.datas
+    end,
+
+    every = function(self, callback)
+        for i, data in ipairs(self.datas) do
+            callback(data, i)
+        end
+    end,
+}
+
+local private = {}
+setmetatable(private, {__mode = 'k'})
+
 DBManager = {
     STRING = function(length)
-        if (length) then
-            return 'VARCHAR(' .. length .. ')'
-        else
-            return 'VARCHAR(255)'
-        end
+        return (length) and 'VARCHAR(' .. length .. ')' or 'VARCHAR(255)'
     end,
     BINARY = 'VARCHAR BINARY',
     TEXT = function(t)
-        if (t == 'tiny') then
-            return 'TINYTEXT'
-        else
-            return 'TEXT'
-        end
+        return (t == 'tiny') and 'TINYTEXT' or 'TEXT'
     end,
     BOOLEAN = 'BOOLEAN',
     INTEGER = 'INTEGER',
     BIGINT = function(length)
-        if (length) then
-            return 'BIGINT(' .. length .. ')'
-        else
-            return 'BIGINT'
-        end
+        return (length) and 'BIGINT(' .. length .. ')' or 'BIGINT'
     end,
     FLOAT = function(length, decimals)
         if (length and decimals) then
@@ -169,59 +391,6 @@ DBManager = {
     DATEONLY = 'DATEONLY',
     UUID = generateUUID,
 }
-
-local CONSTRAINTS_DATA = {
-    allowNull = 'NOT NULL',
-    unique = 'UNIQUE',
-    default = 'DEFAULT',
-    check = 'CHECK',
-    primaryKey = 'PRIMARY KEY',
-    foreingKey = 'FOREIGN KEY',
-    autoIncrement = 'AUTO_INCREMENT',
-    references = 'REFERENCES',
-    onDelete = 'ON DELETE',
-    onUpdate = 'ON UPDATE',
-    comment = 'COMMENT',
-    defaultValue = 'DEFAULT',
-}
-
-local crud = {
-    create = function(self, data)
-        local query = 'INSERT INTO ' .. self.tableName .. ' ('
-        local values = ' VALUES ('
-        local i = 0
-
-        for key, value in pairs(data) do
-            if (i > 0) then
-                query = query .. ', '
-                values = values .. ', '
-            end
-
-            query = query .. key
-            values = values .. '?'
-
-            i = i + 1
-        end
-
-        query = query .. ')' .. values .. ')'
-
-        
-        local queryString = dbPrepareString(self.db:getConnection(), query)
-        if (not queryString) then
-            return false
-        end
-
-        local query = dbQuery(self.db:getConnection(), queryString)
-        if (not query) then
-            return false
-        end
-
-        return true
-    end,
-}
-
-local private = {}
-setmetatable(private, {__mode = 'k'})
 
 function DBManager:new(data)
     local instance = {}
@@ -254,6 +423,25 @@ function DBManager:getConnection()
     return self.CONNECTION
 end
 
+function DBManager:query(queryString)
+    local preparatedString = dbPrepareString(self:getConnection(), queryString)
+    if (not preparatedString) then
+        return false
+    end
+
+    local query = dbQuery(self:getConnection(), preparatedString)
+    if (not query) then
+        return false
+    end
+
+    local result, numAffectedRows, lastInsertId = dbPoll(query, -1)
+    if (not result) then
+        return false
+    end
+
+    return result, numAffectedRows, lastInsertId 
+end
+
 function DBManager:define(tableName, model)
     local instance = {}
 
@@ -261,81 +449,44 @@ function DBManager:define(tableName, model)
     instance.tableName = tableName
     instance.db = self
     instance.dataTypes = {}
-
-    instance.queryDefine = "CREATE TABLE IF NOT EXISTS `" .. instance.tableName .. "` ("
     instance.primaryKey = ""
+    instance.valuesInDB = {}
+    instance.datas = {}
+    
+    local queryDefine = "CREATE TABLE IF NOT EXISTS `" .. instance.tableName .. "` ("
 
     local i = 0
-
-    for key, constraints in pairs(instance.model) do
+    for key, value in pairs(model) do
         if (i > 0) then
-            instance.queryDefine = instance.queryDefine .. ", "
+            queryDefine = queryDefine .. ", "
         end
+        
+        queryDefine = queryDefine .. "`" .. key .. "`"
 
-        instance.queryDefine = instance.queryDefine .. "`" .. key .. "` "
-
-        if (isTable(constraints)) then
-            local constraintsArray = {}
-
-            for constraintKey, constraintValue in pairs(constraints) do
-                local constraintString = ""
-                if (constraintKey == "type") then
-                    instance.dataTypes[key] = constraintValue
-                    constraintString = constraintValue
-                else
-                    if (instance.primaryKey ~= "" and constraintKey == "primaryKey") then
-                        instance.primaryKey = key
-                    elseif (constraintKey == "primaryKey" and instance.primaryKey ~= "") then
-                        error("DBManager: Only one primary key is allowed", 2)
-                    end
-
-                    -- if (CONSTRAINTS_DATA[constraintKey] and constraintKey ~= "primaryKey") then
-                    --     if (isBoolean(constraintValue)) then
-                    --         constraintString = CONSTRAINTS_DATA[constraintKey]
-                    --     else
-                    --         constraintString = CONSTRAINTS_DATA[constraintKey] .. " " .. constraintValue
-                    --     end
-                    -- end
-                end
-                
-                if (constraintString ~= "") then
-                    constraintsArray[#constraintsArray+1] = constraintString
-                end
+        if (isTable(value)) then
+            if (value.type) then
+                instance.dataTypes[key] = value.type
+                queryDefine = queryDefine .. " " .. value.type
             end
 
-            if (constraints["allowNull"] and constraints["allowNull"] == false) then
-                constraintString = constraintString .. " NOT NULL "
+            if (instance.primaryKey == "" and value.primaryKey) then
+                instance.primaryKey = key
+            elseif (instance.primaryKey ~= "" and value.primaryKey) then
+                error('DBManager: Only one primary key is allowed', 2)
             end
 
-            if (constraints["defaultValue"]) then
-                constraintString = CONSTRAINTS_DATA["default"] .. " " .. constraints["defaultValue"]
-            end
-
-            instance.queryDefine = instance.queryDefine .. table.concat(constraintsArray, " ")
+            queryDefine = addConstraintToQuery(queryDefine, key, value)
         else
-            instance.dataTypes[key] = constraints
-            instance.queryDefine = instance.queryDefine .. constraints .. " "
+            instance.dataTypes[key] = value
+            queryDefine = queryDefine .. " " .. value
         end
+
+        instance.valuesInDB[#instance.valuesInDB+1] = key
 
         i = i + 1
     end
 
-    if (instance.primaryKey ~= "") then
-        instance.queryDefine = instance.queryDefine .. ", PRIMARY KEY (`" .. instance.primaryKey .. "`)"
-    end
-
-    instance.queryDefine = instance.queryDefine .. ")"
-
-    iprint(instance.queryDefine)
-    -- local prepareteQueryDefine = dbPrepareString(instance.db:getConnection(), instance.queryDefine)
-    -- if (not prepareteQueryDefine) then
-    --     error("DBManager: Error preparing query define", 2)
-    -- end
-
-    -- local queryDefine = dbExec(instance.db:getConnection(), prepareteQueryDefine)
-    -- if (not queryDefine) then
-    --     error("DBManager: Error executing query define", 2)
-    -- end
+    instance.queryDefine = queryDefine .. ", PRIMARY KEY (`" .. instance.primaryKey .. "`))"
 
     setmetatable(instance, { __index = crud })
     return instance
