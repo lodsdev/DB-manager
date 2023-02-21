@@ -23,22 +23,6 @@
     WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ]]
 
---[[
-    model mysql: {
-        dialect = 'mysql',
-        host = '',
-        port = '',
-        username = '',
-        password = ''
-        database = '',
-
-    },
-    model sqlite: {
-        dialect = 'sqlite',
-        storage = 'database/db.sqlite',
-    }
-]]
-
 local cacheUUID = {}
 local function generateUUID()
     local function hex(num)
@@ -119,7 +103,7 @@ local function pairsToIpairs(tbl)
     return newTbl
 end
 
-local function tableReverse(tbl, callback)
+local function tblReverse(tbl, callback)
     local newTbl = {}
     for i = #tbl, 1, -1 do
         newTbl[#newTbl+1] = tbl[i]
@@ -135,7 +119,9 @@ local function async(f, callback, ...)
     local asyncCoroutine = coroutine.create(f)
     local function step(...)
         if (coroutine.status(asyncCoroutine) == 'dead') then
-            if (callback) then callback(...) end
+            if (callback) then 
+                callback(...) 
+            end
         else
             local success, result = coroutine.resume(asyncCoroutine, ...)
             if (success) then
@@ -156,6 +142,27 @@ local function tblFilter(tbl, callback)
             return k, v
         end
     end
+end
+
+local function tblFind(tbl, value)
+    if (not tbl or not value) then return nil end
+    for k, v in pairs(tbl) do
+        if (v == value) then
+            return k, v
+        end
+    end
+end
+
+local function prepareAndExecQuery(db, query)
+    local queryString = dbPrepareString(db, query)
+    if (not queryString) then
+        return false
+    end
+    local queryExec = dbExec(db, queryString)
+    if (not queryExec) then
+        return false
+    end
+    return true
 end
 
 local CONSTRAINTS_DATA = {
@@ -211,13 +218,8 @@ local DEBUG_RUNNING_DEFAULT = 'DBManager RUNNING (Default): '
 local crud = {
     sync = function(self)
         return async(function()
-            local prepareQuery = dbPrepareString(self.db:getConnection(), self.queryDefine)
-            if (not prepareQuery) then
-                error('DBManager: Error in prepare query', 2)
-            end
-    
-            local query = dbExec(self.db:getConnection(), prepareQuery)
-            if (not query) then
+            local exec = prepareAndExecQuery(self.db:getConnection(), self.queryDefine)
+            if (not exec) then
                 error('DBManager: Error in query', 2)
             end
             
@@ -279,15 +281,10 @@ local crud = {
         end
 
         query = query .. ')' .. values .. ')'
-        
-        local queryString = dbPrepareString(self.db:getConnection(), query)
-        if (not queryString) then
-            return false
-        end
-        
-        local queryExec = dbExec(self.db:getConnection(), queryString)
-        if (not queryExec) then
-            return false
+
+        local exec = prepareAndExecQuery(self.db:getConnection(), query)
+        if (not exec) then
+            error('DBManager: Error in query, can\'t create data', 2)
         end
 
         self.datas[#self.datas+1] = data
@@ -296,51 +293,266 @@ local crud = {
         return data
     end,
 
-    findAll = function(self, data)
-        if (data) then
-            assert(data.attributes or data.where, 'DBManager: Invalid data (findAll)')
+    select = function(self, whereClauses, attributes, justOne)
+        if (not whereClauses or not isTable(whereClauses)) then
+            error('DBManager: Invalid whereClauses (select)', 2)
+        end
 
-            if (data.where) then
-                local where = data.where
-                local rows = self.datas
-                local whereClause = {}
-                local results = {}
-                
-                for i, row in ipairs(rows) do
-                    local match = true
-                    for j, attribute in pairs(where) do
-                        if (row[j] ~= attribute) then
-                            match = false
-                            break
-                        end
-                        whereClause[#whereClause+1] = '`' .. self.tableName .. '`.`' .. j .. '` = ' .. attribute .. ''
+        local results = {}
+        local rows = self.datas
+        local valuesInDB = self.valuesInDB
+
+        if (whereClauses and getTblSize(whereClauses) > 0) then
+            for _, row in ipairs(rows) do
+                local valid = true
+                for key, value in pairs(whereClauses) do
+                    if (not tblFind(valuesInDB, key)) then
+                        error('DBManager: Invalid attribute (select)', 2)
                     end
-                    if (match) then
-                        results[#results+1] = row
+                    if (row[key] ~= value) then
+                        valid = false
+                        break
                     end
                 end
-
-                outputDebugString(DEBUG_RUNNING_DEFAULT .. 'SELECT * FROM `' .. self.tableName .. '` WHERE ' .. table.concat(whereClause, ', '))
-                return results
-            else
-                local attributes = data.attributes
-                local attributeList = table.concat(attributes, ', ')
-                local rows = self.datas
-
-                local results = {}
-                for _, row in ipairs(rows) do
-                    local result = {}
-                    for _, attribute in ipairs(attributes) do
-                        result[attribute] = row[attribute]
+                if (valid) then
+                    results[#results+1] = row
+                    if (justOne) then
+                        break
                     end
-                    results[#results+1] = result
                 end
+            end
+        else
+            results = rows
+        end
 
-                outputDebugString(DEBUG_RUNNING_DEFAULT .. 'SELECT ' .. attributeList .. ' FROM `' .. self.tableName .. '`')
-                return results
+        if (attributes and getTblSize(attributes) > 0) then
+            local attributeList = table.concat(attributes, ', ')
+            local resultsWithAttributes = {}
+
+            for _, row in ipairs(results) do
+                local result = {}
+                for _, attribute in ipairs(attributes) do
+                    if (not tblFind(valuesInDB, attribute)) then
+                        error('DBManager: Invalid attribute (select)', 2)
+                    end
+                    result[attribute] = row[attribute]
+                end
+                resultsWithAttributes[#resultsWithAttributes+1] = result
+            end
+
+            results = resultsWithAttributes
+        end
+        return results
+    end,
+
+    findAll = function(self, options)
+        local whereClauses = options and options.where or {}
+        local attributes = options and options.attributes or {}
+        local orderBy = options and options.orderBy or nil
+        local limit = options and options.limit or nil
+        local offset = options and options.offset or 0
+        local order = options and options.order or 'ASC'
+
+        local results = self:select(whereClauses, attributes)
+
+        if (not results) then
+            error('DBManager: Invalid results (findAll), please open the issue in GitHub', 2)
+        end
+
+        if (orderBy) then
+            local orderType = (order == 'ASC') and 1 or -1
+
+            table.sort(results, function(a, b)
+                if (orderType == 1) then
+                    return a[orderBy] < b[orderBy]
+                else
+                    return a[orderBy] > b[orderBy]
+                end
+            end)
+        end
+
+        if (limit) then
+            local resultsWithLimit = {}
+            for i, result in ipairs(results) do
+                if (i > offset + limit) then break end
+                if (i > offset) then
+                    resultsWithLimit[#resultsWithLimit + 1] = result
+                end
+            end
+            results = resultsWithLimit
+        end
+        return results
+    end,
+
+    findOne = function(self, options)
+        if (not options) then
+            error('DBManager: Invalid options (findOne)', 2)
+        end
+
+        local whereClauses = options.where or {}
+        local attributes = options.attributes or {}
+
+        local results = self:select(whereClauses, attributes, true)
+
+        if (not results) then
+            error('DBManager: Invalid results (findOne), please open the issue in GitHub', 2)
+        end
+        return results
+    end,
+
+    findByPk = function(self, pk, options)
+        if (not self.primaryKey) then
+            error('DBManager: Invalid primaryKey (findByPk)', 2)
+        end
+
+        if (not pk) then
+            error('DBManager: Invalid pk (findByPk)', 2)
+        end
+
+        local whereClauses = options and options.where or {}
+        local attributes = options and options.attributes or {}
+
+        whereClauses[self.primaryKey] = pk
+
+        local results = self:select(whereClauses, attributes, true)
+
+        if (not results) then
+            error('DBManager: Invalid results (findByPk), please open the issue in GitHub', 2)
+        end
+        return results
+    end,
+    
+    update = function(self, data, options)
+        if (not options or not isTable(options)) then
+            error('DBManager: Invalid options (update)', 2)
+        end
+
+        local whereClauses = options.where or {}
+        local query = 'UPDATE `' .. self.tableName .. '` SET '
+        local i = 0
+
+        for key, value in pairs(data) do
+            if (i > 0) then
+                query = query .. ', '
+            end
+
+            if (isString(value)) then
+                value = "'" .. value .. "'"
+            elseif (isBoolean(value)) then
+                value = (value) and 1 or 0
+            elseif (isTable(value)) then
+                value = "'" .. toJSON(value) .. "'"
+            elseif (isNil(value)) then
+                value = 'NULL'
+            end
+
+            query = query .. "`" .. key .. "` = " .. value
+            i = i + 1
+        end
+
+        query = query .. ' WHERE '
+
+        i = 0
+        for key, value in pairs(whereClauses) do
+            if (i > 0) then
+                query = query .. ' AND '
+            end
+
+            query = query .. "`" .. key .. "` = " .. value
+
+            i = i + 1
+        end
+
+        local exec = prepareAndExecQuery(self.db:getConnection(), query)
+        if (not exec) then
+            error('DBManager: ERROR when updating data, please open the issue in GitHub', 2)
+        end
+
+        local rows = self.datas
+        local valuesInDB = self.valuesInDB
+
+        for _, row in ipairs(rows) do
+            local valid = true
+            for key, value in pairs(whereClauses) do
+                if (not tblFind(valuesInDB, key)) then
+                    error('DBManager: Invalid attribute (update)', 2)
+                end
+                if (row[key] ~= value) then
+                    valid = false
+                    break
+                end
+            end
+            if (valid) then
+                for key, value in pairs(data) do
+                    if (not tblFind(valuesInDB, key)) then
+                        error('DBManager: Invalid attribute (update)', 2)
+                    end
+                    row[key] = value
+                end
             end
         end
-        return self.datas
+
+        return true
+    end,
+
+    destroy = function(self, options)
+        if (not options or not isTable(options)) then
+            error('DBManager: Invalid options (destroy)', 2)
+        end
+
+        local whereClauses = options.where or {}
+        local truncate = options.truncate or false
+        local query = 'DELETE FROM `' .. self.tableName .. '` WHERE '
+
+        local i = 0
+        for key, value in pairs(whereClauses) do
+            if (i > 0) then
+                query = query .. ' AND '
+            end
+
+            query = query .. "`" .. key .. "` = " .. value
+
+            i = i + 1
+        end
+
+        if (truncate) then
+            query = 'TRUNCATE TABLE `' .. self.tableName .. '`'
+        end
+
+        local exec = prepareAndExecQuery(self.db:getConnection(), query)
+        if (not exec) then
+            error('DBManager: ERROR when deleting data, please open the issue in GitHub', 2)
+        end
+
+        local rows = self.datas
+        local valuesInDB = self.valuesInDB
+
+        for i, row in ipairs(rows) do
+            local valid = true
+            for key, value in pairs(whereClauses) do
+                if (not tblFind(valuesInDB, key)) then
+                    error('DBManager: Invalid attribute (destroy)', 2)
+                end
+                if (row[key] ~= value) then
+                    valid = false
+                    break
+                end
+            end
+            if (valid) then
+                table.remove(rows, i)
+            end
+        end
+
+        return true
+    end,
+
+    drop = function(self)
+        local query = 'DROP TABLE `' .. self.tableName .. '`'
+        local exec = prepareAndExecQuery(self.db:getConnection(), query)
+        if (not exec) then
+            error('DBManager: ERROR when dropping table, please open the issue in GitHub', 2)
+        end
+        return true
     end,
 
     every = function(self, callback)
@@ -442,10 +654,10 @@ function DBManager:query(queryString)
     return result, numAffectedRows, lastInsertId 
 end
 
-function DBManager:define(tableName, model)
+function DBManager:define(tableName, modelDefinition)
     local instance = {}
 
-    instance.model = model
+    instance.modelDefinition = modelDefinition
     instance.tableName = tableName
     instance.db = self
     instance.dataTypes = {}
@@ -456,7 +668,7 @@ function DBManager:define(tableName, model)
     local queryDefine = "CREATE TABLE IF NOT EXISTS `" .. instance.tableName .. "` ("
 
     local i = 0
-    for key, value in pairs(model) do
+    for key, value in pairs(modelDefinition) do
         if (i > 0) then
             queryDefine = queryDefine .. ", "
         end
