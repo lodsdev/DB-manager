@@ -2,19 +2,20 @@ local Users
 
 addEventHandler('onResourceStart', resourceRoot, function()
     local conn = DBManager:new({
-        dialect = 'mysql',
-        host = 'localhost',
-        port = 3306,
-        username = 'root',
-        password = '123456',
-        database = 'test_db_manager',
+        dialect = 'sqlite',
+        storage = 'database/db.sqlite'
+        -- host = 'localhost',
+        -- port = 3306,
+        -- username = 'root',
+        -- password = '123456',
+        -- database = 'test_db_manager',
     })
     
     if (not conn:getConnection()) then
         error('DBManager: Connection failed', 2)
     end
 
-    Users = conn:define('users', {
+    Users = conn:define('Users', {
         id = {
             type = DBManager.INTEGER,
             allowNull = false,
@@ -22,59 +23,39 @@ addEventHandler('onResourceStart', resourceRoot, function()
             primaryKey = true,
         },
         name = {
-            type = DBManager.STRING(),
+            type = DBManager.TEXT(),
             allowNull = false,
-        },
-        age = {
-            type = DBManager.INTEGER,
-            allowNull = true,
-        },
-        cpf = {
-            type = DBManager.STRING(),
-            allowNull = false,
-            unique = true,
-        },
-        uuid = DBManager.STRING()
+        }
     })
 
     Users:sync()
+    -- Users:sync()
 
     outputDebugString('DBManager: Connection successful')
 end)
 
-addCommandHandler('updateData', function(player, cmd, name, cpf)
-    local userUpdated = Users:update({
-        name = name,
-        age = 20,
-        cpf = cpf,
-    }, {
-        where = { 
-            id = 1 
-        },
-    })
-
-    iprint(userUpdated)
-end)
-
-addCommandHandler('getOneData', function(player, cmd, name)
-    local user = Users:findOne({
-        where = { name = name },
-    })
-
-    iprint(user)
-end)
-
-addCommandHandler('createUser', function(player, cmd, name, age, cpf)
+addCommandHandler('createUser', function(player, cmd)
     Users:create({
-        name = name,
-        age = tonumber(age),
-        cpf = cpf,
-        uuid = DBManager.UUID()
+        name = 'Test'
     })
 end)
 
-addCommandHandler('destroyUser', function(player, cmd, id)
-    Users:destroy({
-        truncate = true
+addCommandHandler('updateUser', function(player, cmd, name)
+    Users:update({
+        name = name
+    }, {
+        where = {
+            id = 1
+        }
     })
+end)
+
+addCommandHandler('dropUser', function(player, cmd)
+    Users:drop()
+end)
+
+addCommandHandler('getAllData', function(player, cmd)
+    local datas = Users:findAll()
+    iprint(datas)
+    -- outputDebugString('Data: ' .. toJSON(data))
 end)

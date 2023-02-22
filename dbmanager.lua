@@ -165,6 +165,21 @@ local function prepareAndExecQuery(db, query)
     return true
 end
 
+local function addZeroForLessThan10(number)
+    if(number < 10) then
+        return 0 .. number
+    else
+        return number
+    end
+end
+
+local function generateDateTime()
+    local dateTimeTable = os.date('*t')
+    local dateTime = dateTimeTable.year .. addZeroForLessThan10(dateTimeTable.month) .. 
+    addZeroForLessThan10(dateTimeTable.day) .. addZeroForLessThan10(dateTimeTable.hour) .. addZeroForLessThan10(dateTimeTable.min) .. addZeroForLessThan10(dateTimeTable.sec)
+    return dateTime
+end
+
 local CONSTRAINTS_DATA = {
     allowNull = 'NOT NULL',
     unique = 'UNIQUE',
@@ -204,7 +219,11 @@ local function addConstraintToQuery(query, key, value)
             if (constraint == 'allowNull' and value[constraint] == false) then
                 query = query .. " " .. CONSTRAINTS_DATA[constraint]
             elseif (constraint ~= 'primaryKey' and constraint ~= 'allowNull' and value[constraint]) then
-                query = query .. " " .. CONSTRAINTS_DATA[constraint]
+                if (isBoolean(value[constraint])) then
+                    query = query .. " " .. CONSTRAINTS_DATA[constraint]
+                else
+                    query = query .. " " .. CONSTRAINTS_DATA[constraint] .. " " .. value[constraint]
+                end
             end
             addedConstraint = true
         end
@@ -222,23 +241,25 @@ local crud = {
             if (not exec) then
                 error('DBManager: Error in query', 2)
             end
-            
-            return query
+            return exec
         end, function()
             local valuesInDB = self.valuesInDB
             local strValues = ''
+
             for key, value in ipairs(valuesInDB) do
                 if (key > 1) then
                     strValues = strValues .. ', '
                 end
-
                 strValues = strValues .. '`' .. value .. '`'
             end
+            
             local querySelect = 'SELECT ' .. strValues .. ' FROM `' .. self.tableName .. '` AS `' .. self.tableName .. '`'
-            local result, numAffectedRows, lastInsertId  = dbPoll(dbQuery(self.db:getConnection(), querySelect), -1)
-            if (not (#result > 0)) then
+            local prepareQuery = dbPrepareString(self.db:getConnection(), querySelect)
+            if (not prepareQuery) then
                 return false
             end
+            
+            local result, numAffectedRows, lastInsertId  = dbPoll(dbQuery(self.db:getConnection(), prepareQuery), -1)
     
             self.datas = result
             outputDebugString(DEBUG_RUNNING_DEFAULT .. querySelect)
@@ -276,7 +297,6 @@ local crud = {
             end
 
             values = values .. value
-
             i = i + 1
         end
 
@@ -450,6 +470,10 @@ local crud = {
             i = i + 1
         end
 
+        if (self.db.data.dialect == 'sqlite') then
+            query = query .. ', `updated_at` = CURRENT_TIMESTAMP'
+        end
+
         query = query .. ' WHERE '
 
         i = 0
@@ -459,7 +483,6 @@ local crud = {
             end
 
             query = query .. "`" .. key .. "` = " .. value
-
             i = i + 1
         end
 
@@ -552,6 +575,10 @@ local crud = {
         if (not exec) then
             error('DBManager: ERROR when dropping table, please open the issue in GitHub', 2)
         end
+
+        self.datas = {}
+        self.db:removeTable(self.tableName)
+
         return true
     end,
 
@@ -600,9 +627,16 @@ DBManager = {
         end
     end,
     DATE = 'DATE',
+    TIME = 'TIME',
+    DATETIME = 'DATETIME',
     DATEONLY = 'DATEONLY',
     UUID = generateUUID,
+    NOW = function ()
+        return generateDateTime()
+    end
 }
+
+local allModels = {}
 
 function DBManager:new(data)
     local instance = {}
@@ -694,12 +728,43 @@ function DBManager:define(tableName, modelDefinition)
         end
 
         instance.valuesInDB[#instance.valuesInDB+1] = key
-
         i = i + 1
     end
 
+    
+    if (instance.primaryKey == "") then
+        instance.primaryKey = 'id'
+        queryDefine = queryDefine .. ", `" .. instance.primaryKey .. "` INTEGER PRIMARY KEY AUTOINCREMENT"
+    end
+    
+    if (instance.db.dialect == 'mysql') then
+        queryDefine = queryDefine .. ", `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP"
+        queryDefine = queryDefine .. ", `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"
+    else
+        queryDefine = queryDefine .. ", `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP"
+        queryDefine = queryDefine .. ", `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP"
+    end
+    
+    instance.valuesInDB[#instance.valuesInDB+1] = 'created_at'
+    instance.valuesInDB[#instance.valuesInDB+1] = 'updated_at'
+
     instance.queryDefine = queryDefine .. ", PRIMARY KEY (`" .. instance.primaryKey .. "`))"
 
+    allModels[#allModels+1] = instance
     setmetatable(instance, { __index = crud })
     return instance
+end
+
+function DBManager:removeTable(tableName)
+    for i, model in ipairs(allModels) do
+        if (model.tableName == tableName) then
+            table.remove(allModels, i)
+        end
+    end
+end
+
+function DBManager:sync()
+    for _, model in ipairs(allModels) do
+        model:sync()
+    end
 end
