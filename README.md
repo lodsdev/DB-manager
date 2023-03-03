@@ -55,9 +55,7 @@ Users:sync()
 
 addCommandHandler('insertUser', function(player, cmd, name)
     -- insert a new user
-    Users:create({
-        name = name
-    })
+    Users:create({ name = name })
 end)
 
 addCommandHandler('getUsers', function(player, cmd)
@@ -81,6 +79,22 @@ end)
 addCommandHandler('getUser', function(player, cmd, id)
     -- get a user by id
     local user = Users:findByPk(id)
+
+    iprint(user) --[[
+        {
+            id = 1,
+            name = 'John'
+        }
+    ]]
+end)
+
+addCommandHandler('getUserByName', function(player, cmd, name)
+    -- get a user by name
+    local user = Users:findOne({
+        where = {
+            name = name
+        }
+    })
 
     iprint(user) --[[
         {
