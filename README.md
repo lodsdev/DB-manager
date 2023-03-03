@@ -23,28 +23,8 @@ local conn = DBManager:new({
 if (not conn:getConnection()) then
     error('DBManager: Connection failed', 2)
 end
-```
 
-Let's create a table for users.
-```lua
--- sintaxe
-local table = conn:define('table_name', {
-    column_name = {
-        type = DBManager.INTEGER,
-        allowNull = false,
-        autoIncrement = true,
-        primaryKey = true,
-    },
-    column_name = {
-        type = DBManager.TEXT(),
-        allowNull = false,
-    }
-})
-```
-
-### Example
-```lua
--- create table
+-- create a table for users
 local Users = conn:define('Users', {
     id = {
         type = DBManager.INTEGER,
@@ -60,6 +40,63 @@ local Users = conn:define('Users', {
 
 -- It's important to sync the local table with the database
 Users:sync()
+
+addCommandHandler('insertUser', function(player, cmd, name)
+    -- insert a new user
+    Users:create({
+        name = name
+    })
+end)
+
+addCommandHandler('getUsers', function(player, cmd)
+    -- get all users
+    local users = Users:findAll()
+
+    iprint(users) --[[
+        {
+            [1] = {
+                id = 1,
+                name = 'John'
+            },
+            [2] = {
+                id = 2,
+                name = 'Jane'
+            }
+        }
+    ]]
+end)
+
+addCommandHandler('getUser', function(player, cmd, id)
+    -- get a user by id
+    local user = Users:findByPk(id)
+
+    iprint(user) --[[
+        {
+            id = 1,
+            name = 'John'
+        }
+    ]]
+end)
+
+addCommandHandler('updateUser', function(player, cmd, id, name)
+    -- update a user by id
+    Users:update({
+        name = name
+    }, {
+        where = {
+            id = id
+        }
+    })
+end)
+
+addCommandHandler('deleteUser', function(player, cmd, id)
+    -- delete a user by id
+    Users:destroy({
+        where = {
+            id = id
+        }
+    })
+end)
 ```
 
 ## Example (using SQLite)
@@ -72,46 +109,9 @@ local conn = DBManager:new({
 })
 ```
 
-## Model Querying
+## Documentation
 
-## Simple INSERT queries
-First, a simple example.
 
-```lua
-service:create({1, "LODS", 20})
-```
-
-```sql
-INSERT INTO ... VALUES(1, "LODS", 20)
-```
-
-## Simple SELECT queries
-You can use `findAll()` method to get all data.
-
-```lua
-service:findOne("name", "LODS")
-```
-```sql
-SELECT FROM ... WHERE name = "LODS"
-```
-
-## Simple DELETE queries
-You can use `deleteAll()` method to delete all data.
-
-```lua
-service:delete("name", "LODS")
-```
-```sql
-DELETE FROM ... WHERE name = "LODS"
-```
-
-## Simple UPDATE queries
-```lua
-service:update("name", "LODIS", "id", 1)
-```
-```sql
-UPDATE ... SET name = "LODIS" WHERE id = 1
-```
 
 ## License
 
