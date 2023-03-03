@@ -5,9 +5,13 @@
 This is library for easy manipulation of database in MTA:SA, with a clean syntax and optimized. You don't need to worry about using **Queries** several times, this library manipulates a table in **location** to include all data in cache, this allows you not to look for the data directly in the database, but in the cache.
 
 ## Getting started
+Text about documentation:
+
+- [Documentation]
+
 ## Example (using MySQL)
 
-To get started, first download the file `dbmanager.lua` and put in your resource, you need instantiate the classes in script. To example we will create table for users.
+Example of how to use the library, in this example we will create a table for users, and we will perform the following actions:
 
 ```lua
 -- connect to database (MySQL)
@@ -108,10 +112,6 @@ local conn = DBManager:new({
     storage = 'database/db.sqlite'
 })
 ```
-
-## Documentation
-
-
 
 ## License
 
