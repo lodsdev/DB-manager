@@ -10,34 +10,66 @@ This is library for easy manipulation of database in MTA:SA, with a clean syntax
 To get started, first download the file `dbmanager.lua` and put in your resource, you need instantiate the classes in script. To example we will create table for users.
 
 ```lua
-local db = DBManagerClass("mysql", {
-    host = "localhost",
+-- connect to database (MySQL)
+local conn = DBManager:new({
+    host = 'localhost',
     port = 3306,
-    username = "root",
-    password = "myPass123",
-    database = "users"
+    username = 'root',
+    password = '123456',
+    database = 'test_db_manager',
 })
-local myTable = TableClass(db:getConnection(), "myTable")
 
--- Create table
-myTable:create([[
-    id INT NOT NULL AUTO_INCREMENT,
-    name VARCHAR(255) NOT NULL,
-    age INT NOT NULL,
-    PRIMARY KEY (id)
-]])
+-- check if connection is successful
+if (not conn:getConnection()) then
+    error('DBManager: Connection failed', 2)
+end
 ```
 
-To receive data in location, it is necessary instantiate the service class.
-
+Let's create a table for users.
 ```lua
-local service = RepoServiceClass(myTable)
+-- sintaxe
+local table = conn:define('table_name', {
+    column_name = {
+        type = DBManager.INTEGER,
+        allowNull = false,
+        autoIncrement = true,
+        primaryKey = true,
+    },
+    column_name = {
+        type = DBManager.TEXT(),
+        allowNull = false,
+    }
+})
+```
+
+### Example
+```lua
+-- create table
+local Users = conn:define('Users', {
+    id = {
+        type = DBManager.INTEGER,
+        allowNull = false,
+        autoIncrement = true,
+        primaryKey = true,
+    },
+    name = {
+        type = DBManager.TEXT(),
+        allowNull = false,
+    }
+})
+
+-- It's important to sync the local table with the database
+Users:sync()
 ```
 
 ## Example (using SQLite)
 
 ```lua
-local db = DBManagerClass("sqlite", "database/file.db")
+-- connect to database (MySQL)
+local conn = DBManager:new({
+    dialect = 'sqlite',
+    storage = 'database/db.sqlite'
+})
 ```
 
 ## Model Querying

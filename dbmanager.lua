@@ -730,11 +730,9 @@ function DBManager:define(tableName, modelDefinition)
         instance.valuesInDB[#instance.valuesInDB+1] = key
         i = i + 1
     end
-
     
     if (instance.primaryKey == "") then
-        instance.primaryKey = 'id'
-        queryDefine = queryDefine .. ", `" .. instance.primaryKey .. "` INTEGER PRIMARY KEY AUTOINCREMENT"
+        error('DBManager: No primary key defined', 2)
     end
     
     if (instance.db.dialect == 'mysql') then
