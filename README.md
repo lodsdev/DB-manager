@@ -15,6 +15,7 @@ Example of how to use the library, in this example we will create a table for us
 
 ```lua
 -- connect to database (MySQL)
+-- "DBManager" is the variable that contains the library [check the documentation for more information]
 local conn = DBManager:new({
     host = 'localhost',
     port = 3306,
@@ -24,11 +25,13 @@ local conn = DBManager:new({
 })
 
 -- check if connection is successful
+-- "getConnection" is a function that returns a boolean value indicating if the connection was successful [check the documentation for more information]
 if (not conn:getConnection()) then
     error('DBManager: Connection failed', 2)
 end
 
 -- create a table for users
+-- "define" is a function that creates a table in the database [check the documentation for more information]
 local Users = conn:define('Users', {
     id = {
         type = DBManager.INTEGER,
@@ -43,6 +46,7 @@ local Users = conn:define('Users', {
 })
 
 -- It's important to sync the local table with the database
+-- "sync" is a function that syncs the local table with the database [check the documentation for more information]
 Users:sync()
 
 addCommandHandler('insertUser', function(player, cmd, name)
