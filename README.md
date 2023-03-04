@@ -38,7 +38,7 @@ end
 -- [check the documentation for more information]
 local Users = conn:define("Users", {
     id = {
-        type = DBManager.INTEGER,
+        type = DBManager.INTEGER(),
         allowNull = false,
         autoIncrement = true,
         primaryKey = true,
