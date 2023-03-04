@@ -527,12 +527,21 @@ DBManager = {
     STRING = function(length)
         return (length) and 'VARCHAR(' .. length .. ')' or 'VARCHAR(255)'
     end,
-    BINARY = 'VARCHAR BINARY',
+    BINARY = function(length)
+        return (length) and 'BINARY(' .. length .. ')' or 'BINARY'
+    end,
     TEXT = function(t)
         return (t == 'tiny') and 'TINYTEXT' or 'TEXT'
     end,
-    BOOLEAN = 'BOOLEAN',
-    INTEGER = 'INTEGER',
+    BOOLEAN = function()
+        return 'BOOLEAN'
+    end,
+    INTEGER = function()
+        return 'INTEGER'
+    end,
+    INT = function(length)
+        return (length) and 'INT(' .. length .. ')' or 'INT'
+    end,
     BIGINT = function(length)
         return (length) and 'BIGINT(' .. length .. ')' or 'BIGINT'
     end,
@@ -564,14 +573,22 @@ DBManager = {
     BLOB = function(t)
         return (t == 'tiny') and 'TINYBLOB' or 'BLOB'
     end,
-    DATE = 'DATE',
-    TIME = 'TIME',
-    DATETIME = 'DATETIME',
-    DATEONLY = 'DATEONLY',
-    UUID = generateUUID,
+    DATE = function()
+        return 'DATE'
+    end,
+    TIME = function()
+        return 'TIME'
+    end,
+    DATETIME = function()
+        return 'DATETIME'
+    end,
+    DATEONLY = function()
+        return 'DATE'
+    end,
     NOW = function ()
         return generateDateTime()
     end,
+    UUID = generateUUID,
 
     models = {}
 }
