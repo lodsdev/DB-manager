@@ -36,7 +36,7 @@ end
 -- create a table for users
 -- "define" is a function that creates a table in the database 
 -- [check the documentation for more information]
-local Users = conn:define('Users', {
+local Users = conn:define("Users", {
     id = {
         type = DBManager.INTEGER,
         allowNull = false,
