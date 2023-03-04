@@ -136,6 +136,11 @@ local conn = DBManager:new({
 })
 ```
 
+## Supporting the project
+Did you like DB Manager and would you like to contribute to its growth?
+
+Feel free to create your fork on your profile and contribute PR's to improve the project.
+
 ## License
 
 [Click here to see the license.](https://github.com/lodsdev/database-management/blob/main/MIT-LICENSE.txt)
