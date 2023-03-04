@@ -157,7 +157,7 @@ end
 local CONSTRAINTS_DATA = {
     allowNull = 'NOT NULL',
     unique = 'UNIQUE',
-    default = 'DEFAULT',
+    defaultValue = 'DEFAULT',
     check = 'CHECK',
     primaryKey = 'PRIMARY KEY',
     foreingKey = 'FOREIGN KEY',
@@ -166,7 +166,6 @@ local CONSTRAINTS_DATA = {
     onDelete = 'ON DELETE',
     onUpdate = 'ON UPDATE',
     comment = 'COMMENT',
-    defaultValue = 'DEFAULT',
 }
 
 local CONSTRAINT_ORDER = {
@@ -538,14 +537,18 @@ DBManager = {
         return (length) and 'BIGINT(' .. length .. ')' or 'BIGINT'
     end,
     FLOAT = function(length, decimals)
-        if (length and decimals) then
+        if (length) then
+            return 'FLOAT(' .. length .. ')'
+        elseif (length and decimals) then
             return 'FLOAT(' .. length .. ', ' .. decimals .. ')'
         else
             return 'FLOAT'
         end
     end,
     DOUBLE = function(length, decimals)
-        if (length and decimals) then
+        if (length) then
+            return 'DOUBLE(' .. length .. ')'
+        elseif (length and decimals) then
             return 'DOUBLE(' .. length .. ', ' .. decimals .. ')'
         else
             return 'DOUBLE'
@@ -558,6 +561,9 @@ DBManager = {
             return 'DECIMAL'
         end
     end,
+    BLOB = function(t)
+        return (t == 'tiny') and 'TINYBLOB' or 'BLOB'
+    end,
     DATE = 'DATE',
     TIME = 'TIME',
     DATETIME = 'DATETIME',
@@ -565,10 +571,10 @@ DBManager = {
     UUID = generateUUID,
     NOW = function ()
         return generateDateTime()
-    end
-}
+    end,
 
-local allModels = {}
+    models = {}
+}
 
 function DBManager:new(data)
     local instance = {}
@@ -590,7 +596,7 @@ function DBManager:new(data)
             instance.data.options
         )
     elseif (data.dialect == 'sqlite') then
-        instance.CONNECTION = dbConnect(instance.data.dialect, instance.data.storage)
+        instance.CONNECTION = dbConnect(instance.data.dialect, instance.data.storage or 'database.db')
     end
 
     setmetatable(instance, { __index = self })
@@ -689,7 +695,7 @@ function DBManager:define(tableName, modelDefinition)
 
     instance.queryDefine = queryDefine .. ", PRIMARY KEY (`" .. instance.primaryKey .. "`))"
 
-    allModels[#allModels+1] = instance
+    self.models[tableName] = instance
     setmetatable(instance, { __index = crud })
     return instance
 end
@@ -703,7 +709,13 @@ function DBManager:removeTable(tableName)
 end
 
 function DBManager:sync()
-    for _, model in ipairs(allModels) do
+    for _, model in pairs(self.models) do
         model:sync()
+    end
+end
+
+function DBManager:drop()
+    for _, model in pairs(self.models) do
+        model:drop()
     end
 end
