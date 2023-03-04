@@ -4,10 +4,10 @@
 
 This is library for easy manipulation of database in MTA:SA, with a clean syntax and optimized. You don't need to worry about using **Queries** several times, this library manipulates a table in **location** to include all data in cache, this allows you not to look for the data directly in the database, but in the cache.
 
-## Getting started
-Text about documentation:
+## Documentation
+This is a link to the documentation of the library, where you can find all the functions and how to use them.
 
-- [Documentation]
+- [Click here to see the Documentation](https://github.com/lodsdev/db-manager/wiki)
 
 ## Example (using MySQL)
 
