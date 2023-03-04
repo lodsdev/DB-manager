@@ -18,18 +18,19 @@ Example of how to use the library, in this example we will create a table for us
 -- "DBManager" is the variable that contains the library 
 -- [check the documentation for more information]
 local conn = DBManager:new({
-    host = 'localhost',
+    dialect = "mysql",
+    host = "localhost",
     port = 3306,
-    username = 'root',
-    password = '123456',
-    database = 'test_db_manager',
+    username = "root",
+    password = "123456",
+    database = "test_db_manager",
 })
 
 -- check if connection is successful
 -- "getConnection" is a function that returns a boolean value indicating if the connection was successful 
 -- [check the documentation for more information]
 if (not conn:getConnection()) then
-    error('DBManager: Connection failed', 2)
+    error("DBManager: Connection failed", 2)
 end
 
 -- create a table for users
@@ -53,12 +54,12 @@ local Users = conn:define('Users', {
 -- [check the documentation for more information]
 Users:sync()
 
-addCommandHandler('insertUser', function(player, cmd, name)
+addCommandHandler("insertUser", function(player, cmd, name)
     -- insert a new user
     Users:create({ name = name })
 end)
 
-addCommandHandler('getUsers', function(player, cmd)
+addCommandHandler("getUsers", function(player, cmd)
     -- get all users
     local users = Users:findAll()
 
@@ -76,7 +77,7 @@ addCommandHandler('getUsers', function(player, cmd)
     ]]
 end)
 
-addCommandHandler('getUser', function(player, cmd, id)
+addCommandHandler("getUser", function(player, cmd, id)
     -- get a user by id
     local user = Users:findByPk(id)
 
@@ -88,7 +89,7 @@ addCommandHandler('getUser', function(player, cmd, id)
     ]]
 end)
 
-addCommandHandler('getUserByName', function(player, cmd, name)
+addCommandHandler("getUserByName", function(player, cmd, name)
     -- get a user by name
     local user = Users:findOne({
         where = {
@@ -104,7 +105,7 @@ addCommandHandler('getUserByName', function(player, cmd, name)
     ]]
 end)
 
-addCommandHandler('updateUser', function(player, cmd, id, name)
+addCommandHandler("updateUser", function(player, cmd, id, name)
     -- update a user by id
     Users:update({
         name = name
@@ -115,7 +116,7 @@ addCommandHandler('updateUser', function(player, cmd, id, name)
     })
 end)
 
-addCommandHandler('deleteUser', function(player, cmd, id)
+addCommandHandler("deleteUser", function(player, cmd, id)
     -- delete a user by id
     Users:destroy({
         where = {
@@ -130,8 +131,8 @@ end)
 ```lua
 -- connect to database (MySQL)
 local conn = DBManager:new({
-    dialect = 'sqlite',
-    storage = 'database/db.sqlite'
+    dialect = "sqlite",
+    storage = "database/db.sqlite"
 })
 ```
 
