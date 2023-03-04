@@ -75,10 +75,6 @@ local function isString(str)
     return type(str) == 'string'
 end
 
-local function isNumber(num)
-    return type(num) == 'number'
-end
-
 local function isBoolean(bool)
     return type(bool) == 'boolean'
 end
@@ -93,26 +89,6 @@ local function getTblSize(tbl)
         length = length + 1
     end
     return length
-end
-
-local function pairsToIpairs(tbl)
-    local newTbl = {}
-    for k, v in pairs(tbl) do
-        newTbl[#newTbl+1] = { k, v }
-    end
-    return newTbl
-end
-
-local function tblReverse(tbl, callback)
-    local newTbl = {}
-    for i = #tbl, 1, -1 do
-        newTbl[#newTbl+1] = tbl[i]
-
-        if (callback) then
-            callback(tbl[i], i)
-        end
-    end
-    return newTbl
 end
 
 local function async(f, callback, ...)
@@ -132,16 +108,6 @@ local function async(f, callback, ...)
         end
     end
     step(...)
-end
-
-local function tblFilter(tbl, callback)
-    if (not tbl or not callback) then return nil end
-    for k, v in pairs(tbl) do
-        local exec = callback(k, v)
-        if (exec) then
-            return k, v
-        end
-    end
 end
 
 local function tblFind(tbl, value)
@@ -667,6 +633,15 @@ end
 
 function DBManager:getConnection()
     return self.CONNECTION
+end
+
+function DBManager:close()
+    local connection = self:getConnection()
+    if (isElement(connection)) then
+        destroyElement(connection)
+        return true
+    end
+    return false
 end
 
 function DBManager:query(queryString)
