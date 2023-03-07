@@ -83,6 +83,10 @@ local function isNumber(number)
     return type(number) == 'number'
 end
 
+local function isJSON(value)
+    return ((isString(value) and value:gmatch('%[%[.+%]%]')) and fromJSON(value) or value)
+end
+
 local function async(f, callback, ...)
     local asyncCoroutine = coroutine.create(f)
     local function step(...)
@@ -154,6 +158,19 @@ local function toSQLValue(value)
     end
 end
 
+local function formatTblFromDB(tbl)
+    local newTbl = {}
+    for k, v in ipairs(tbl) do
+        if (not newTbl[k]) then
+            newTbl[k] = {}
+        end
+        for key, value in pairs(v) do
+            newTbl[k][key] = isJSON(value)
+        end
+    end
+    return newTbl
+end
+
 local CONSTRAINTS_DATA = {
     allowNull = 'NOT NULL',
     unique = 'UNIQUE',
@@ -220,7 +237,8 @@ local crud = {
             end
 
             local result, numAffectedRows, lastInsertId  = dbPoll(dbQuery(self.db:getConnection(), prepareQuery), -1)
-            self.datas = (#result > 0) and result or {}
+            self.datas = (#result > 0) and formatTblFromDB(result) or {}
+            iprint(self.datas)
             outputDebugString(DEBUG_RUNNING_DEFAULT .. querySelect)
 
             return result, numAffectedRows, lastInsertId
