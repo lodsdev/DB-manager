@@ -367,7 +367,7 @@ local crud = {
         if (not results) then
             error('DBManager: Invalid results (findOne), please open the issue in GitHub', 2)
         end
-        return results
+        return results[1]
     end,
 
     findByPk = function(self, pk, options)
