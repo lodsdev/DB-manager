@@ -148,7 +148,7 @@ local function toSQLValue(value)
     elseif (isNumber(value)) then
         return tostring(value)
     elseif (isBoolean(value)) then
-        return value and '1' or '0'
+        return value and 1 or 0
     elseif (isTable(value)) then
         return "'" .. toJSON(value) .. "'"
     elseif (isNil(value)) then
