@@ -144,13 +144,13 @@ end
 
 local function toSQLValue(value)
     if (isString(value)) then
-        return '"'.. value:gsub("'", "''") .. '"'
+        return ''.. value:gsub('"', '""') .. ''
     elseif (isNumber(value)) then
         return tostring(value)
     elseif (isBoolean(value)) then
         return value and 1 or 0
     elseif (isTable(value)) then
-        return "'" .. toJSON(value) .. "'"
+        return toJSON(value)
     elseif (isNil(value)) then
         return 'NULL'
     else
