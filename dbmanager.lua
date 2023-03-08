@@ -83,6 +83,10 @@ local function isNumber(number)
     return type(number) == 'number'
 end
 
+local function isJSON(value)
+    return ((isString(value) and value:gmatch('%[%[.+%]%]')) and fromJSON(value) or value)
+end
+
 local function async(f, callback, ...)
     local asyncCoroutine = coroutine.create(f)
     local function step(...)
@@ -111,8 +115,9 @@ local function tblFind(tbl, value)
     end
 end
 
-local function prepareAndExecQuery(db, query)
-    local queryString = dbPrepareString(db, query)
+local function prepareAndExecQuery(db, query, ...)
+    local params = { ... }
+    local queryString = dbPrepareString(db, query, unpack(params))
     if (not queryString) then
         return false
     end
@@ -139,19 +144,30 @@ local function generateDateTime()
 end
 
 local function toSQLValue(value)
-    if (isString(value)) then
-        return '"'.. value:gsub("'", "''") .. '"'
-    elseif (isNumber(value)) then
+    if (isNumber(value)) then
         return tostring(value)
     elseif (isBoolean(value)) then
-        return value and '1' or '0'
+        return value and 1 or 0
     elseif (isTable(value)) then
-        return "'" .. toJSON(value) .. "'"
+        return toJSON(value)
     elseif (isNil(value)) then
         return 'NULL'
     else
-        error('Invalid value type: ' .. type(value))
+        return value
     end
+end
+
+local function formatTblFromDB(tbl)
+    local newTbl = {}
+    for k, v in ipairs(tbl) do
+        if (not newTbl[k]) then
+            newTbl[k] = {}
+        end
+        for key, value in pairs(v) do
+            newTbl[k][key] = isJSON(value)
+        end
+    end
+    return newTbl
 end
 
 local CONSTRAINTS_DATA = {
@@ -220,7 +236,7 @@ local crud = {
             end
 
             local result, numAffectedRows, lastInsertId  = dbPoll(dbQuery(self.db:getConnection(), prepareQuery), -1)
-            self.datas = (#result > 0) and result or {}
+            self.datas = (#result > 0) and formatTblFromDB(result) or {}
             outputDebugString(DEBUG_RUNNING_DEFAULT .. querySelect)
 
             return result, numAffectedRows, lastInsertId
@@ -238,8 +254,7 @@ local crud = {
 
         for key, value in pairs(data) do
             keys[#keys+1] = key
-            value = toSQLValue(value)
-            values[#values+1] = value
+            values[#values+1] = toSQLValue(value)
         end
 
         local query = 'INSERT INTO `' .. self.tableName .. '` (`' .. table.concat(keys, '`, `') .. '`) VALUES (' .. table.concat(values, ', ') .. ')'
@@ -349,7 +364,7 @@ local crud = {
         if (not results) then
             error('DBManager: Invalid results (findOne), please open the issue in GitHub', 2)
         end
-        return results
+        return results[1]
     end,
 
     findByPk = function(self, pk, options)
@@ -391,10 +406,10 @@ local crud = {
             queryParts[#queryParts+1] = '`'
             queryParts[#queryParts+1] = key
             queryParts[#queryParts+1] = '` = ?'
-
+            
             values[#values+1] = toSQLValue(value)
         end
-
+        
         if (self.db.data.dialect == 'sqlite') then
             queryParts[#queryParts+1] = ', `updated_at` = CURRENT_TIMESTAMP'
         end
@@ -417,7 +432,7 @@ local crud = {
         end
 
         local query = table.concat(queryParts)
-        local exec = dbExec(self.db:getConnection(), query, unpack(values))
+        local exec = prepareAndExecQuery(self.db:getConnection(), query, unpack(values))
         if (not exec) then
             error('DBManager: ERROR when updating data, please open the issue in GitHub', 2)
         end
