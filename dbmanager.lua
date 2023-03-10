@@ -254,7 +254,12 @@ local crud = {
 
         for key, value in pairs(data) do
             keys[#keys+1] = key
-            values[#values+1] = toSQLValue(value)
+            if (type(value) == 'string') then
+                value = value:gsub('"', '\\"')
+                values[#values+1] = '"' .. value .. '"'
+            else
+                values[#values+1] = toSQLValue(value)
+            end
         end
 
         local query = 'INSERT INTO `' .. self.tableName .. '` (`' .. table.concat(keys, '`, `') .. '`) VALUES (' .. table.concat(values, ', ') .. ')'
