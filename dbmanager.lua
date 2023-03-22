@@ -476,45 +476,53 @@ local crud = {
 
         local whereClauses = options.where or {}
         local truncate = options.truncate or false
-        local query
+        local queryParts = { 'DELETE FROM `', self.tableName, '` WHERE '}
+        local values = {}
 
         if (truncate) then
             query = 'TRUNCATE TABLE `' .. self.tableName .. '`'
         else
-            query = 'DELETE FROM `' .. self.tableName .. '` WHERE '
             local i = 0
             for key, value in pairs(whereClauses) do
-                if (i > 1) then
-                    query = query .. ' AND '
+                if (i > 0) then
+                    queryParts[#queryParts+1] = ' AND '
                 end
 
-                query = query .. '`' .. key .. '` = ' .. toSQLValue(value)
+                queryParts[#queryParts+1] = '`'
+                queryParts[#queryParts+1] = key
+                queryParts[#queryParts+1] = '` = ?'
+                values[#values+1] = toSQLValue(value)
 
                 i = i + 1
             end
         end
 
-        local exec = prepareAndExecQuery(self.db:getConnection(), query)
+        local query = table.concat(queryParts)
+        local exec = prepareAndExecQuery(self.db:getConnection(), query, unpack(values))
         if (not exec) then
             error('DBManager: ERROR when destroying data, please open the issue in GitHub', 2)
         end
 
-        local valuesInDB = self.valuesInDB
-        for i = #self.datas, 1, -1 do
-            local row = self.datas[i]
-            local valid = true
-            for key, value in ipairs(whereClauses) do
-                if (not tblFind(valuesInDB, key)) then
-                    error('DBManager: Invalid attribute (destroy)', 2)
+        if (not truncate) then
+            local valuesInDB = self.valuesInDB
+            for i = #self.datas, 1, -1 do
+                local row = self.datas[i]
+                local valid = true
+                for key, value in ipairs(whereClauses) do
+                    if (not tblFind(valuesInDB, key)) then
+                        error('DBManager: Invalid attribute (destroy)', 2)
+                    end
+                    if (row[key] ~= value) then
+                        valid = false
+                        break
+                    end
                 end
-                if (row[key] ~= value) then
-                    valid = false
-                    break
+                if (valid) then
+                    table.remove(self.datas, i)
                 end
             end
-            if (valid) then
-                table.remove(self.datas, i)
-            end
+        else
+            self.datas = {}
         end
 
         return true
