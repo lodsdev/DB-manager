@@ -480,7 +480,7 @@ local crud = {
         local values = {}
 
         if (truncate) then
-            query = 'TRUNCATE TABLE `' .. self.tableName .. '`'
+            queryParts = { 'TRUNCATE TABLE `', self.tableName, '`' }
         else
             local i = 0
             for key, value in pairs(whereClauses) do
