@@ -244,26 +244,35 @@ local crud = {
     end,
 
     create = function(self, data)
-        local keys = {}
         local values = {}
+        local queryParts = { 'INSERT INTO `', self.tableName, '` (' }
+        local dataValues = {}
 
         if (self.primaryKey) then
-            keys[#keys+1] = self.primaryKey
-            values[#values+1] = #self.datas + 1
+            queryParts[#queryParts+1] = '`' .. self.primaryKey .. '`'
+            values[#values+1] = '?'
+            dataValues[#dataValues+1] = #self.datas + 1
         end
 
+        local i = 0
         for key, value in pairs(data) do
-            keys[#keys+1] = key
-            if (type(value) == 'string') then
-                value = value:gsub('"', '\\"')
-                values[#values+1] = '"' .. value .. '"'
-            else
-                values[#values+1] = toSQLValue(value)
+            if (#values > 0) then
+                queryParts[#queryParts+1] = ', '
             end
+
+            queryParts[#queryParts+1] = '`'
+            queryParts[#queryParts+1] = key
+            queryParts[#queryParts+1] = '`'
+            values[#values+1] = '?'
+            dataValues[#dataValues+1] = toSQLValue(value)
+
+            i = i + 1
         end
 
-        local query = 'INSERT INTO `' .. self.tableName .. '` (`' .. table.concat(keys, '`, `') .. '`) VALUES (' .. table.concat(values, ', ') .. ')'
-        local exec = prepareAndExecQuery(self.db:getConnection(), query)
+        queryParts[#queryParts+1] = ') VALUES (' .. table.concat(values, ', ') .. ')'
+
+        local query = table.concat(queryParts)
+        local exec = prepareAndExecQuery(self.db:getConnection(), query, unpack(dataValues))
         if (not exec) then
             error('DBManager: Error in query, can\'t create data', 2)
         end
