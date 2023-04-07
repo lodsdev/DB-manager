@@ -36,8 +36,8 @@ addEventHandler("onResourceStart", resourceRoot, function()
 
         local responseData = fromJSON(data)
         if (responseData) then
-            local tag_name = tostring(responseData.tag_name)
-            local latestVersion = tonumber(tag_name:gsub("%.", ""))
+            local tag_name = responseData.tag_name:gsub("%.", "")
+            local latestVersion = tonumber(tag_name)
             if (latestVersion > VERSION) then
                 outputDebugString("[DEBUG - DBManager]: New version available! (v" .. responseData.tag_name .. ")")
                 outputDebugString("[DEBUG - DBManager]: Download: " .. responseData.html_url)
