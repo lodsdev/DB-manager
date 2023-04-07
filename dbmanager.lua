@@ -1,7 +1,7 @@
 --[[
     Library: DB Manager
     Author: https://github.com/lodsdev
-    Version: 2.0
+    Version: 1.1.2
     
     MIT License
     Copyright (c) 2012-2022 Scott Chacon and others
@@ -23,6 +23,28 @@
     OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
     WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ]]
+
+local VERSION = 112
+
+addEventHandler("onResourceStart", resourceRoot, function()    
+    if (not (hasObjectPermissionTo(getThisResource(), 'function.fetchRemote', false))) then
+        error("[DEBUG - DBManager]: You need to add 'function.fetchRemote' permission to check for new releases!")
+    end
+
+    fetchRemote("https://api.github.com/repos/lodsdev/db-manager/releases/latest", function(data, status)
+        assert(status == 0 and data, "[DBManager] Can't fetch 'api.github.com' for new releases! (Status code: " .. tostring(status) .. ")")
+
+        local responseData = fromJSON(data)
+        if (responseData) then
+            local tag_name = tostring(responseData.tag_name)
+            local latestVersion = tonumber(tag_name:gsub("%.", ""))
+            if (latestVersion > VERSION) then
+                outputDebugString("[DEBUG - DBManager]: New version available! (v" .. responseData.tag_name .. ")")
+                outputDebugString("[DEBUG - DBManager]: Download: " .. responseData.html_url)
+            end
+        end
+    end)
+end)
 
 local cacheUUID = {}
 local function generateUUID()
@@ -472,6 +494,49 @@ local crud = {
                     end
                     row[key] = value
                 end
+            end
+        end
+
+        return true
+    end,
+
+    updateAll = function(self, data)
+        if (not data or not isTable(data)) then
+            error('DBManager: Invalid data (updateAll)', 2)
+        end
+
+        local queryParts = { 'UPDATE `', self.tableName, '` SET ' }
+        local values = {}
+
+        for key, value in pairs(data) do
+            if (#values > 0) then
+                queryParts[#queryParts+1] = ', '
+            end
+
+            queryParts[#queryParts+1] = '`'
+            queryParts[#queryParts+1] = key
+            queryParts[#queryParts+1] = '` = ?'
+            
+            values[#values+1] = toSQLValue(value)
+        end
+        
+        if (self.db.data.dialect == 'sqlite') then
+            queryParts[#queryParts+1] = ', `updated_at` = CURRENT_TIMESTAMP'
+        end
+
+        local query = table.concat(queryParts)
+        local exec = prepareAndExecQuery(self.db:getConnection(), query, unpack(values))
+        if (not exec) then
+            error('DBManager: ERROR when updating data, please open the issue in GitHub', 2)
+        end
+
+        local rows = self.datas
+        for _, row in ipairs(rows) do
+            for key, value in pairs(data) do
+                if (not tblFind(self.valuesInDB, key)) then
+                    error('DBManager: Invalid attribute (updateAll)', 2)
+                end
+                row[key] = value
             end
         end
 
