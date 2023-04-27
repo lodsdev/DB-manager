@@ -1,4 +1,4 @@
 .vscode
 meta.xml
-database
+database.db
 test.lua
