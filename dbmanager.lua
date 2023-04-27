@@ -1,7 +1,7 @@
 --[[
     Library: DB Manager
     Author: https://github.com/lodsdev
-    Version: 1.1.2
+    Version: 1.1.3
     
     MIT License
     Copyright (c) 2012-2022 Scott Chacon and others
@@ -24,7 +24,7 @@
     WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ]]
 
-local VERSION = 112
+local VERSION = 113
 
 addEventHandler("onResourceStart", resourceRoot, function()    
     if (not (hasObjectPermissionTo(getThisResource(), 'function.fetchRemote', false))) then
@@ -128,7 +128,7 @@ local function async(f, callback, ...)
     step(...)
 end
 
-local function tblFind(tbl, value)
+local function table_find(tbl, value)
     if (not tbl or not value) then return nil end
     for k, v in pairs(tbl) do
         if (v == value) then
@@ -269,36 +269,38 @@ local crud = {
         local values = {}
         local queryParts = { 'INSERT INTO `', self.tableName, '` (' }
         local dataValues = {}
-
+        
         if (self.primaryKey) then
             queryParts[#queryParts+1] = '`' .. self.primaryKey .. '`'
             values[#values+1] = '?'
-            dataValues[#dataValues+1] = #self.datas + 1
+            dataValues[#dataValues+1] = (#self.datas >= 1) and (self.datas[#self.datas].id + 1) or 1
         end
-
+        local newId = dataValues[#dataValues]
+        
         local i = 0
         for key, value in pairs(data) do
             if (#values > 0) then
                 queryParts[#queryParts+1] = ', '
             end
-
+            
             queryParts[#queryParts+1] = '`'
             queryParts[#queryParts+1] = key
             queryParts[#queryParts+1] = '`'
             values[#values+1] = '?'
             dataValues[#dataValues+1] = toSQLValue(value)
-
+            
             i = i + 1
         end
-
+        
         queryParts[#queryParts+1] = ') VALUES (' .. table.concat(values, ', ') .. ')'
-
+        
         local query = table.concat(queryParts)
         local exec = prepareAndExecQuery(self.db:getConnection(), query, unpack(dataValues))
         if (not exec) then
             error('DBManager: Error in query, can\'t create data', 2)
         end
-
+        
+        data.id = newId
         self.datas[#self.datas + 1] = data
 
         outputDebugString('DB Manager RUNNING: ' .. query)
@@ -500,49 +502,6 @@ local crud = {
         return true
     end,
 
-    updateAll = function(self, data)
-        if (not data or not isTable(data)) then
-            error('DBManager: Invalid data (updateAll)', 2)
-        end
-
-        local queryParts = { 'UPDATE `', self.tableName, '` SET ' }
-        local values = {}
-
-        for key, value in pairs(data) do
-            if (#values > 0) then
-                queryParts[#queryParts+1] = ', '
-            end
-
-            queryParts[#queryParts+1] = '`'
-            queryParts[#queryParts+1] = key
-            queryParts[#queryParts+1] = '` = ?'
-            
-            values[#values+1] = toSQLValue(value)
-        end
-        
-        if (self.db.data.dialect == 'sqlite') then
-            queryParts[#queryParts+1] = ', `updated_at` = CURRENT_TIMESTAMP'
-        end
-
-        local query = table.concat(queryParts)
-        local exec = prepareAndExecQuery(self.db:getConnection(), query, unpack(values))
-        if (not exec) then
-            error('DBManager: ERROR when updating data, please open the issue in GitHub', 2)
-        end
-
-        local rows = self.datas
-        for _, row in ipairs(rows) do
-            for key, value in pairs(data) do
-                if (not tblFind(self.valuesInDB, key)) then
-                    error('DBManager: Invalid attribute (updateAll)', 2)
-                end
-                row[key] = value
-            end
-        end
-
-        return true
-    end,
-
     destroy = function(self, options)
         if (not options or not isTable(options)) then
             error('DBManager: Invalid options (destroy)', 2)
@@ -582,7 +541,7 @@ local crud = {
             for i = #self.datas, 1, -1 do
                 local row = self.datas[i]
                 local valid = true
-                for key, value in ipairs(whereClauses) do
+                for key, value in pairs(whereClauses) do
                     if (not tblFind(valuesInDB, key)) then
                         error('DBManager: Invalid attribute (destroy)', 2)
                     end
